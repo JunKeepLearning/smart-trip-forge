@@ -1,2 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Environment variables / secrets
 .env
-venv
+.env.*
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# VS Code settings (optional)
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test cache
+.pytest_cache/
+.tox/
+.coverage
+coverage.xml
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Supabase local config (if used)
+supabase/.temp/
+supabase/migrations/
+supabase/.dev.db
+
+# SQLite / local DB files
+*.db
+*.sqlite3
+
+# Logs
+*.log
+*.log.*
+# Mac OS
+.DS_Store
+
+# Backup files
+*.bak
+*.swp
+*~
