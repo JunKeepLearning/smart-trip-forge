@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, X, MapPin, Route, Building2, ArrowRight, Calendar, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Route, Building2, ArrowRight, Calendar } from 'lucide-react';
 import TheHeader from '@/components/TheHeader';
+import SearchBar from '@/components/SearchBar';
+import DetailDrawer from '@/components/DetailDrawer';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedType, setSelectedType] = useState<'destination' | 'route' | 'spot'>('destination');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const destinations = [
     {
@@ -110,34 +115,36 @@ const Explore = () => {
   const hasResults = filteredDestinations.length > 0 || filteredRoutes.length > 0 || filteredSpots.length > 0;
   const isSearching = searchQuery.length > 0;
 
+  const handleCardClick = (item: any, type: 'destination' | 'route' | 'spot') => {
+    setSelectedItem(item);
+    setSelectedType(type);
+    setIsDrawerOpen(true);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="text-purple-800 font-semibold">{part}</span>
+      ) : part
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <TheHeader />
       
-      {/* Search Bar */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search destinations, spots or routes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10 h-12 text-base"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <SearchBar 
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={handleSearch}
+      />
 
       <div className="container mx-auto px-4 py-8">
         {isSearching && !hasResults && (
@@ -160,8 +167,12 @@ const Explore = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(isSearching ? filteredDestinations : destinations).map((destination) => (
-                    <Card key={destination.id} className="group hover:shadow-lg transition-all duration-200 cursor-pointer">
-                      <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
+                    <Card 
+                      key={destination.id} 
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      onClick={() => handleCardClick(destination, 'destination')}
+                    >
+                      <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
                         <img 
                           src={destination.image} 
                           alt={destination.name}
@@ -169,18 +180,28 @@ const Explore = () => {
                         />
                       </div>
                       <CardHeader>
-                        <CardTitle className="text-xl">{destination.name}</CardTitle>
-                        <CardDescription>{destination.description}</CardDescription>
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin className="w-4 h-4 text-purple-800" />
+                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
+                            Destination
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          {highlightMatch(destination.name, searchQuery)}
+                        </CardTitle>
+                        <CardDescription className="text-sm text-gray-600">
+                          {highlightMatch(destination.description, searchQuery)}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex flex-wrap gap-2 mb-4">
                           {destination.highlights.map((highlight, index) => (
-                            <span key={index} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
+                            <Badge key={index} variant="secondary" className="text-xs">
                               {highlight}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
-                        <Button className="w-full group/btn">
+                        <Button className="w-full group/btn bg-purple-800 hover:bg-purple-700">
                           View Details
                           <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                         </Button>
@@ -202,28 +223,42 @@ const Explore = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(isSearching ? filteredRoutes : routes).map((route) => (
-                    <Card key={route.id} className="group hover:shadow-lg transition-all duration-200">
+                    <Card 
+                      key={route.id} 
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      onClick={() => handleCardClick(route, 'route')}
+                    >
                       <CardHeader>
-                        <CardTitle className="text-xl">{route.name}</CardTitle>
-                        <CardDescription>{route.description}</CardDescription>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Route className="w-4 h-4 text-purple-800" />
+                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
+                            Route
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          {highlightMatch(route.name, searchQuery)}
+                        </CardTitle>
+                        <CardDescription className="text-sm text-gray-600">
+                          {highlightMatch(route.description, searchQuery)}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
                           <MapPin className="w-4 h-4" />
                           <span>{route.startCity} → {route.endCity}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="w-4 h-4" />
                           <span>{route.days} days</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {route.tags.map((tag, index) => (
-                            <span key={index} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-md">
+                            <Badge key={index} variant="secondary" className="text-xs rounded-full px-3 py-1">
                               {tag}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
-                        <Button className="w-full group/btn">
+                        <Button className="w-full group/btn bg-purple-800 hover:bg-purple-700">
                           Start AI Planning
                           <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                         </Button>
@@ -245,8 +280,12 @@ const Explore = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {(isSearching ? filteredSpots : spots).map((spot) => (
-                    <Card key={spot.id} className="group hover:shadow-lg transition-all duration-200 cursor-pointer">
-                      <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
+                    <Card 
+                      key={spot.id} 
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      onClick={() => handleCardClick(spot, 'spot')}
+                    >
+                      <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
                         <img 
                           src={spot.image} 
                           alt={spot.name}
@@ -254,19 +293,29 @@ const Explore = () => {
                         />
                       </div>
                       <CardHeader>
-                        <CardTitle className="text-xl">{spot.name}</CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building2 className="w-4 h-4 text-purple-800" />
+                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
+                            Spot
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          {highlightMatch(spot.name, searchQuery)}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                           <MapPin className="w-4 h-4" />
                           <span>{spot.destination}</span>
                         </div>
-                        <CardDescription>{spot.description}</CardDescription>
+                        <CardDescription className="text-sm text-gray-600">
+                          {highlightMatch(spot.description, searchQuery)}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
+                          <Badge variant="secondary" className="text-xs">
                             {spot.category}
-                          </span>
-                          <Button size="sm" className="group/btn">
+                          </Badge>
+                          <Button size="sm" className="group/btn bg-purple-800 hover:bg-purple-700">
                             View Details
                             <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                           </Button>
@@ -280,6 +329,13 @@ const Explore = () => {
           </div>
         )}
       </div>
+
+      <DetailDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        item={selectedItem}
+        type={selectedType}
+      />
     </div>
   );
 };
