@@ -8,6 +8,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
 import TheHeader from '@/components/TheHeader';
+import TheFooter from '@/components/TheFooter';
 import { 
   Plus, 
   Bot, 
@@ -285,6 +286,7 @@ const Checklist = () => {
           )}
         </DrawerContent>
       </Drawer>
+      <TheFooter />
     </div>
   );
 };

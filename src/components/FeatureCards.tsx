@@ -30,16 +30,19 @@ const FeatureCards = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+    // Use flexbox for the container on medium screens and up to ensure equal height cards
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
       {features.map((feature, index) => (
-        <Card key={index} className="bg-muted border-border hover:shadow-md transition-shadow duration-200">
+        // Add flex and flex-col to make the card a flex container itself
+        <Card key={index} className="bg-muted border-border hover:shadow-md transition-shadow duration-200 flex flex-col">
           <CardHeader>
             <CardTitle className="text-foreground">{feature.title}</CardTitle>
             <CardDescription className="text-muted-foreground">
               {feature.description}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          {/* Add flex-grow to make this content area expand and push the footer down */}
+          <CardContent className="space-y-4 flex-grow">
             {feature.items.length > 0 && (
               <div className="space-y-2">
                 {feature.items.map((item, itemIndex) => (
@@ -60,8 +63,11 @@ const FeatureCards = () => {
                 </span>
               ))}
             </div>
+          </CardContent>
 
-            <div className="flex justify-end pt-2">
+          {/* This part is now effectively the footer of the card content */}
+          <div className="p-6 pt-0">
+            <div className="flex justify-end">
               <Button 
                 asChild 
                 size="sm" 
@@ -73,7 +79,7 @@ const FeatureCards = () => {
                 </Link>
               </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
       ))}
     </div>

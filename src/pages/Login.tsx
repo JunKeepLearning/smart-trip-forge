@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, X } from 'lucide-react'; // Import X icon
+
+const REDIRECT_PATH = '/';
 
 const Login: React.FC = () => {
   const { signIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
   
-  // Form state management
+  // Form state management, added displayName
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    displayName: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,8 +32,35 @@ const Login: React.FC = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (error) setError('');
+  };
+
+  const handleSignIn = async () => {
+    const { error } = await signIn(formData.email, formData.password);
+    if (error) {
+      setError(error);
+      return false;
+    }
+    return true;
+  };
+
+  // Updated to pass displayName
+  const handleSignUp = async () => {
+    const { error } = await signUp(formData.email, formData.password, formData.displayName);
+    if (error) {
+      setError(error);
+      return false;
+    }
+    return true;
+  };
+
+  const handleResetPassword = async () => {
+    const { error } = await resetPassword(formData.email);
+    if (error) {
+      setError(error);
+    } else {
+      setResetEmailSent(true);
+    }
   };
 
   // Handle form submission
@@ -40,29 +70,17 @@ const Login: React.FC = () => {
     setError('');
 
     try {
+      let success = false;
       if (mode === 'reset') {
-        const { error } = await resetPassword(formData.email);
-        if (error) {
-          setError(error);
-        } else {
-          setResetEmailSent(true);
-        }
+        await handleResetPassword();
       } else if (mode === 'signup') {
-        const { error } = await signUp(formData.email, formData.password);
-        if (error) {
-          setError(error);
-        } else {
-          // Redirect to home after successful signup
-          navigate('/');
-        }
+        success = await handleSignUp();
       } else {
-        const { error } = await signIn(formData.email, formData.password);
-        if (error) {
-          setError(error);
-        } else {
-          // Redirect to home after successful login
-          navigate('/');
-        }
+        success = await handleSignIn();
+      }
+
+      if (success) {
+        navigate(REDIRECT_PATH);
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -73,7 +91,7 @@ const Login: React.FC = () => {
 
   const getTitle = () => {
     switch (mode) {
-      case 'signup': return 'Create Account';
+      case 'signup': return 'Create an Account';
       case 'reset': return 'Reset Password';
       default: return 'Welcome Back';
     }
@@ -81,9 +99,9 @@ const Login: React.FC = () => {
 
   const getDescription = () => {
     switch (mode) {
-      case 'signup': return 'Sign up to start planning your trips';
-      case 'reset': return 'Enter your email to receive reset instructions';
-      default: return 'Sign in to your account to continue';
+      case 'signup': return 'Fill in the details to start your journey.';
+      case 'reset': return 'Enter your email to receive reset instructions.';
+      default: return 'Sign in to your account to continue.';
     }
   };
 
@@ -102,7 +120,7 @@ const Login: React.FC = () => {
               onClick={() => {
                 setMode('signin');
                 setResetEmailSent(false);
-                setFormData({ email: '', password: '' });
+                setFormData({ email: '', password: '', displayName: '' });
               }}
               variant="outline"
               className="w-full"
@@ -116,7 +134,21 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 relative">
+      {/* Responsive Return/Close Button */}
+      <Link to="/" className="absolute top-4 right-4 md:hidden">
+        <Button variant="ghost" size="icon">
+          <X className="h-6 w-6" />
+        </Button>
+      </Link>
+
+      {/* App Logo/Name Link for Desktop */}
+      <div className="hidden md:block mb-8">
+        <Link to="/" className="text-3xl font-bold text-primary hover:text-primary/80 transition-colors">
+          travelplan
+        </Link>
+      </div>
+
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-foreground">{getTitle()}</CardTitle>
@@ -125,6 +157,28 @@ const Login: React.FC = () => {
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Nickname Input (only for signup mode) */}
+            {mode === 'signup' && (
+              <div className="space-y-2">
+                <label htmlFor="displayName" className="text-sm font-medium text-foreground">
+                  Nickname
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="displayName"
+                    name="displayName"
+                    type="text"
+                    value={formData.displayName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your nickname"
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email Input */}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-foreground">

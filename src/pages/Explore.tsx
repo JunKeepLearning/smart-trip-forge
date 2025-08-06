@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Route, Building2, ArrowRight, Calendar } from 'lucide-react';
 import TheHeader from '@/components/TheHeader';
+import TheFooter from '@/components/TheFooter';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
 
@@ -169,7 +170,7 @@ const Explore = () => {
                   {(isSearching ? filteredDestinations : destinations).map((destination) => (
                     <Card 
                       key={destination.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
                       onClick={() => handleCardClick(destination, 'destination')}
                     >
                       <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
@@ -179,7 +180,7 @@ const Explore = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       </div>
-                      <CardHeader>
+                      <CardHeader className="flex-grow">
                         <div className="flex items-center gap-2 mb-2">
                           <MapPin className="w-4 h-4 text-purple-800" />
                           <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
@@ -225,7 +226,7 @@ const Explore = () => {
                   {(isSearching ? filteredRoutes : routes).map((route) => (
                     <Card 
                       key={route.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
                       onClick={() => handleCardClick(route, 'route')}
                     >
                       <CardHeader>
@@ -242,7 +243,7 @@ const Explore = () => {
                           {highlightMatch(route.description, searchQuery)}
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4 flex-grow">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <MapPin className="w-4 h-4" />
                           <span>{route.startCity} → {route.endCity}</span>
@@ -258,11 +259,13 @@ const Explore = () => {
                             </Badge>
                           ))}
                         </div>
+                      </CardContent>
+                      <div className="p-6 pt-0">
                         <Button className="w-full group/btn bg-purple-800 hover:bg-purple-700">
                           Start AI Planning
                           <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                         </Button>
-                      </CardContent>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -282,7 +285,7 @@ const Explore = () => {
                   {(isSearching ? filteredSpots : spots).map((spot) => (
                     <Card 
                       key={spot.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl"
+                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
                       onClick={() => handleCardClick(spot, 'spot')}
                     >
                       <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
@@ -292,7 +295,7 @@ const Explore = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       </div>
-                      <CardHeader>
+                      <CardHeader className="flex-grow">
                         <div className="flex items-center gap-2 mb-2">
                           <Building2 className="w-4 h-4 text-purple-800" />
                           <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
@@ -336,6 +339,7 @@ const Explore = () => {
         item={selectedItem}
         type={selectedType}
       />
+      <TheFooter />
     </div>
   );
 };

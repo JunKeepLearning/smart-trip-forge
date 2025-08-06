@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import TheHeader from "@/components/TheHeader";
+import TheFooter from "@/components/TheFooter";
 
 interface Trip {
   id: string;
@@ -225,6 +226,7 @@ const Plan = () => {
           )}
         </div>
       </main>
+      <TheFooter />
     </div>
   );
 };

@@ -8,9 +8,10 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
+  updateUserDisplayName: (displayName: string) => Promise<{ error?: string }>;
 }
 
 // Create the context with default values
@@ -73,11 +74,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string) => {
+  // Sign up with email, password, and display name
+  const signUp = async (email: string, password: string, displayName: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            display_name: displayName,
+          },
+        },
       });
 
       if (error) {
@@ -110,6 +117,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update user display name
+  const updateUserDisplayName = async (displayName: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { display_name: displayName },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      // Manually update the user state to reflect the change immediately
+      if (user) {
+        const updatedUser = { ...user, user_metadata: { ...user.user_metadata, display_name: displayName } };
+        setUser(updatedUser);
+      }
+
+      return {};
+    } catch (error) {
+      return { error: 'An unexpected error occurred' };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -118,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     resetPassword,
+    updateUserDisplayName,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
