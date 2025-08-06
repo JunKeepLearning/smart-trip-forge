@@ -32,14 +32,14 @@ const FeatureCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
       {features.map((feature, index) => (
-        <Card key={index} className="bg-muted border-border hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
+        <Card key={index} className="bg-muted border-border hover:shadow-md transition-shadow duration-200">
           <CardHeader>
             <CardTitle className="text-foreground">{feature.title}</CardTitle>
             <CardDescription className="text-muted-foreground">
               {feature.description}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col flex-1 space-y-4">
+          <CardContent className="space-y-4">
             {feature.items.length > 0 && (
               <div className="space-y-2">
                 {feature.items.map((item, itemIndex) => (
@@ -61,7 +61,7 @@ const FeatureCards = () => {
               ))}
             </div>
 
-            <div className="flex justify-end pt-2 mt-auto">
+            <div className="flex justify-end pt-2">
               <Button 
                 asChild 
                 size="sm" 
