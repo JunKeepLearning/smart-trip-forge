@@ -6,8 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Explore from "./pages/Explore";
-import Plan from "./pages/Plan";
-import Checklist from "./pages/Checklist";
+import Plan from './pages/Plan';
+import Itinerary from './pages/Itinerary';
+import Checklist from './pages/Checklist';
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import PricingPage from "./pages/PricingPage";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/plan" element={<Plan />} />
+        <Route path="/plan/:tripId" element={<Itinerary />} />
             <Route path="/checklist" element={<Checklist />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />

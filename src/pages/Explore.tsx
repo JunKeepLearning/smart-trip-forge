@@ -7,6 +7,14 @@ import TheHeader from '@/components/TheHeader';
 import TheFooter from '@/components/TheFooter';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from '@/components/ui/carousel';
+import TravelCard from '@/components/TravelCard';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -166,109 +174,34 @@ const Explore = () => {
                     {isSearching ? 'Destinations' : 'Popular Destinations'}
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(isSearching ? filteredDestinations : destinations).map((destination) => (
-                    <Card 
-                      key={destination.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
-                      onClick={() => handleCardClick(destination, 'destination')}
-                    >
-                      <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
-                        <img 
-                          src={destination.image} 
-                          alt={destination.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                <Carousel
+                  opts={{
+                    align: "start",
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-4">
+                    {(isSearching ? filteredDestinations : destinations.slice(0, 6)).map((destination) => (
+                      <CarouselItem key={destination.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                        <TravelCard 
+                          item={destination} 
+                          type="destination" 
+                          searchQuery={searchQuery} 
+                          onClick={handleCardClick}
                         />
-                      </div>
-                      <CardHeader className="flex-grow">
-                        <div className="flex items-center gap-2 mb-2">
-                          <MapPin className="w-4 h-4 text-purple-800" />
-                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
-                            Destination
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          {highlightMatch(destination.name, searchQuery)}
-                        </CardTitle>
-                        <CardDescription className="text-sm text-gray-600">
-                          {highlightMatch(destination.description, searchQuery)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {destination.highlights.map((highlight, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {highlight}
-                            </Badge>
-                          ))}
-                        </div>
-                        <Button className="w-full group/btn bg-purple-800 hover:bg-purple-700">
-                          View Details
-                          <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Routes Section */}
-            {(!isSearching || filteredRoutes.length > 0) && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <Route className="w-6 h-6 text-primary" />
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {isSearching ? 'Routes' : 'Recommended Routes'}
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(isSearching ? filteredRoutes : routes).map((route) => (
-                    <Card 
-                      key={route.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
-                      onClick={() => handleCardClick(route, 'route')}
-                    >
-                      <CardHeader>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Route className="w-4 h-4 text-purple-800" />
-                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
-                            Route
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          {highlightMatch(route.name, searchQuery)}
-                        </CardTitle>
-                        <CardDescription className="text-sm text-gray-600">
-                          {highlightMatch(route.description, searchQuery)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4 flex-grow">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin className="w-4 h-4" />
-                          <span>{route.startCity} → {route.endCity}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>{route.days} days</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {route.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs rounded-full px-3 py-1">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                      <div className="p-6 pt-0">
-                        <Button className="w-full group/btn bg-purple-800 hover:bg-purple-700">
-                          Start AI Planning
-                          <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+                {!isSearching && (
+                  <div className="text-right mt-4">
+                    <Button variant="link" onClick={() => alert('Navigate to all destinations page')}>
+                      View All Destinations <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </section>
             )}
 
@@ -281,52 +214,74 @@ const Explore = () => {
                     {isSearching ? 'Spots' : 'Featured Spots'}
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(isSearching ? filteredSpots : spots).map((spot) => (
-                    <Card 
-                      key={spot.id} 
-                      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col"
-                      onClick={() => handleCardClick(spot, 'spot')}
-                    >
-                      <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
-                        <img 
-                          src={spot.image} 
-                          alt={spot.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                <Carousel
+                  opts={{
+                    align: "start",
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-4">
+                    {(isSearching ? filteredSpots : spots.slice(0, 6)).map((spot) => (
+                      <CarouselItem key={spot.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                        <TravelCard 
+                          item={spot} 
+                          type="spot" 
+                          searchQuery={searchQuery} 
+                          onClick={handleCardClick}
                         />
-                      </div>
-                      <CardHeader className="flex-grow">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Building2 className="w-4 h-4 text-purple-800" />
-                          <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
-                            Spot
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          {highlightMatch(spot.name, searchQuery)}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                          <MapPin className="w-4 h-4" />
-                          <span>{spot.destination}</span>
-                        </div>
-                        <CardDescription className="text-sm text-gray-600">
-                          {highlightMatch(spot.description, searchQuery)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">
-                            {spot.category}
-                          </Badge>
-                          <Button size="sm" className="group/btn bg-purple-800 hover:bg-purple-700">
-                            View Details
-                            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+                {!isSearching && (
+                  <div className="text-right mt-4">
+                    <Button variant="link" onClick={() => alert('Navigate to all spots page')}>
+                      View All Spots <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Routes Section */}
+            {(!isSearching || filteredRoutes.length > 0) && (
+              <section>
+                <div className="flex items-center gap-3 mb-6">
+                  <Route className="w-6 h-6 text-primary" />
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {isSearching ? 'Routes' : 'Recommended Routes'}
+                  </h2>
                 </div>
+                <Carousel
+                  opts={{
+                    align: "start",
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-4">
+                    {(isSearching ? filteredRoutes : routes.slice(0, 6)).map((route) => (
+                      <CarouselItem key={route.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                        <TravelCard 
+                          item={route} 
+                          type="route" 
+                          searchQuery={searchQuery} 
+                          onClick={handleCardClick}
+                        />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+                {!isSearching && (
+                  <div className="text-right mt-4">
+                    <Button variant="link" onClick={() => alert('Navigate to all routes page')}>
+                      View All Routes <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </section>
             )}
           </div>
