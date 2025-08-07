@@ -9,6 +9,7 @@ import Explore from "./pages/Explore";
 import Plan from './pages/Plan';
 import Itinerary from './pages/Itinerary';
 import Checklist from './pages/Checklist';
+import Finance from './pages/Finance';
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import PricingPage from "./pages/PricingPage";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/plan" element={<Plan />} />
         <Route path="/plan/:tripId" element={<Itinerary />} />
             <Route path="/checklist" element={<Checklist />} />
+            <Route path="/finance" element={<Finance />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<PricingPage />} />

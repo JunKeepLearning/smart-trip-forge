@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 // 导入自定义的 Button 组件
 import { Button } from '@/components/ui/button';
 // 从 lucide-react 库导入图标，用于界面元素
-import { Compass, Map, ClipboardList, Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Compass, Map, ClipboardList, DollarSign, Menu, X, User, LogOut, Settings } from 'lucide-react';
 // 导入 useAuth 自定义钩子，用于访问认证上下文
 import { useAuth } from '@/contexts/AuthContext';
 // 导入下拉菜单相关组件
@@ -32,6 +32,7 @@ const TheHeader = () => {
     { name: 'Explore', icon: Compass, href: '/explore' },
     { name: 'Plan', icon: Map, href: '/plan' },
     { name: 'Checklist', icon: ClipboardList, href: '/checklist' },
+    { name: 'Finance', icon: DollarSign, href: '/finance' },
   ];
 
   // 返回头部组件的 JSX
