@@ -108,7 +108,13 @@ const Itinerary = () => {
       }));
     } else if (addingToDayId) {
       // Add new item
-      const newItem: ItineraryItem = { id: Date.now().toString(), ...values };
+      const newItem: ItineraryItem = { 
+        id: Date.now().toString(), 
+        name: values.name,
+        time: values.time,
+        type: values.type || 'custom',
+        notes: values.notes
+      };
       setItinerary(itinerary.map(day => {
         if (day.id === addingToDayId) {
           return { ...day, items: [...day.items, newItem] };

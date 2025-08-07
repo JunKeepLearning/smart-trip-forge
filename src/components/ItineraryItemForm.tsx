@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   time: z.string().optional(),
-  type: z.enum(['attraction', 'restaurant', 'hotel', 'custom']),
+  type: z.enum(['attraction', 'restaurant', 'hotel', 'custom']).default('custom'),
   notes: z.string().optional(),
 });
 
