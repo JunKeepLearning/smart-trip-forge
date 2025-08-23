@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { TheHeader } from '@/components/layout';
-import { TheFooter } from '@/components/layout';
+import TheHeader from '@/components/TheHeader';
+import TheFooter from '@/components/TheFooter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';

@@ -2,13 +2,33 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Route, Building2, Calendar } from 'lucide-react';
+import { Destination, Spot, Route as RouteType } from '@/lib/api';
 
-interface TravelCardProps {
-  item: any;
-  type: 'destination' | 'route' | 'spot';
+// Define props for each card type using a discriminated union
+type TravelCardBaseProps = {
   searchQuery: string;
-  onClick: (item: any, type: 'destination' | 'route' | 'spot') => void;
-}
+};
+
+type DestinationCardProps = TravelCardBaseProps & {
+  type: 'destination';
+  item: Destination;
+  onClick: (item: Destination, type: 'destination') => void;
+};
+
+type SpotCardProps = TravelCardBaseProps & {
+  type: 'spot';
+  item: Spot;
+  onClick: (item: Spot, type: 'spot') => void;
+};
+
+type RouteCardProps = TravelCardBaseProps & {
+  type: 'route';
+  item: RouteType;
+  onClick: (item: RouteType, type: 'route') => void;
+};
+
+// The final props type is a union of all possible card types
+type TravelCardProps = DestinationCardProps | SpotCardProps | RouteCardProps;
 
 const highlightMatch = (text: string, query: string) => {
   if (!query) return text;
@@ -21,15 +41,28 @@ const highlightMatch = (text: string, query: string) => {
   );
 };
 
-const TravelCard: React.FC<TravelCardProps> = ({ item, type, searchQuery, onClick }) => {
+const TravelCard: React.FC<TravelCardProps> = (props) => {
+  const { type, item, searchQuery } = props;
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span key={index} className="text-purple-800 font-semibold">{part}</span>
+      ) : part
+    );
+  };
+
   const renderContent = () => {
     switch (type) {
       case 'destination':
         return (
           <>
             <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
-              <img 
-                src={item.image} 
+              <img
+                src={item.image}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
@@ -63,8 +96,8 @@ const TravelCard: React.FC<TravelCardProps> = ({ item, type, searchQuery, onClic
         return (
           <>
             <div className="aspect-video bg-gray-100 rounded-t-xl overflow-hidden">
-              <img 
-                src={item.image} 
+              <img
+                src={item.image}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
@@ -116,7 +149,9 @@ const TravelCard: React.FC<TravelCardProps> = ({ item, type, searchQuery, onClic
             <CardContent className="space-y-4 flex-grow">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4" />
-                <span>{item.startCity} → {item.endCity}</span>
+                <span>
+                  {item.startCity} → {item.endCity}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="w-4 h-4" />
@@ -137,10 +172,24 @@ const TravelCard: React.FC<TravelCardProps> = ({ item, type, searchQuery, onClic
     }
   };
 
+  const handleClick = () => {
+    switch (props.type) {
+      case 'destination':
+        props.onClick(props.item, 'destination');
+        break;
+      case 'spot':
+        props.onClick(props.item, 'spot');
+        break;
+      case 'route':
+        props.onClick(props.item, 'route');
+        break;
+    }
+  };
+
   return (
-    <Card 
+    <Card
       className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-white border border-gray-200 rounded-xl flex flex-col h-full"
-      onClick={() => onClick(item, type)}
+      onClick={handleClick}
     >
       {renderContent()}
     </Card>

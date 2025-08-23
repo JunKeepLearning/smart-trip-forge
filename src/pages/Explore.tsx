@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Route, Building2, ArrowRight, Calendar } from 'lucide-react';
+import { MapPin, Route, Building2, ArrowRight, AlertCircle } from 'lucide-react';
 import TheHeader from '@/components/TheHeader';
 import TheFooter from '@/components/TheFooter';
 import SearchBar from '@/components/SearchBar';
@@ -15,138 +13,155 @@ import {
   CarouselNext,
 } from '@/components/ui/carousel';
 import TravelCard from '@/components/TravelCard';
+import TravelCardSkeleton from '@/components/TravelCardSkeleton';
+import { useExploreData } from '@/hooks/useExploreData';
+import { Destination, Spot, Route as RouteType } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<Destination | Spot | RouteType | null>(null);
   const [selectedType, setSelectedType] = useState<'destination' | 'route' | 'spot'>('destination');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const destinations = [
-    {
-      id: 1,
-      name: 'Beijing',
-      description: 'Historic capital with ancient architecture and modern culture',
-      image: '/placeholder.svg',
-      highlights: ['Forbidden City', 'Great Wall', 'Temple of Heaven']
-    },
-    {
-      id: 2,
-      name: "Xi'an",
-      description: 'Ancient capital famous for Terracotta Warriors',
-      image: '/placeholder.svg',
-      highlights: ['Terracotta Army', 'City Wall', 'Muslim Quarter']
-    },
-    {
-      id: 3,
-      name: 'Shanghai',
-      description: 'Modern metropolis blending East and West',
-      image: '/placeholder.svg',
-      highlights: ['The Bund', 'Yu Garden', 'Oriental Pearl Tower']
+  const { data, loading, error } = useExploreData();
+
+  const handleSearch = () => {
+    if (searchQuery.trim() !== '') {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
-  ];
+  };
 
-  const routes = [
-    {
-      id: 1,
-      name: 'Classic China Discovery',
-      startCity: 'Beijing',
-      endCity: 'Shanghai',
-      days: 7,
-      tags: ['7-day', 'Cultural', 'Historic'],
-      description: 'Experience China\'s imperial past and vibrant present'
-    },
-    {
-      id: 2,
-      name: 'Family Adventure Tour',
-      startCity: 'Beijing',
-      endCity: "Xi'an",
-      days: 5,
-      tags: ['5-day', 'Family Friendly', 'Educational'],
-      description: 'Perfect introduction to Chinese history for families'
-    },
-    {
-      id: 3,
-      name: 'City Explorer Route',
-      startCity: 'Shanghai',
-      endCity: 'Suzhou',
-      days: 3,
-      tags: ['3-day', 'Urban', 'Modern'],
-      description: 'Modern cities and traditional gardens'
+  const filteredData = useMemo(() => {
+    if (!data) return { destinations: [], routes: [], spots: [] };
+
+    const query = searchQuery.toLowerCase();
+    if (!query) {
+      return {
+        destinations: data.destinations,
+        routes: data.routes,
+        spots: data.spots,
+      };
     }
-  ];
 
-  const spots = [
-    {
-      id: 1,
-      name: 'Forbidden City',
-      destination: 'Beijing',
-      description: 'Imperial palace complex with 600 years of history',
-      image: '/placeholder.svg',
-      category: 'Historic'
-    },
-    {
-      id: 2,
-      name: 'Terracotta Warriors',
-      destination: "Xi'an",
-      description: 'Ancient army of clay soldiers guarding an emperor',
-      image: '/placeholder.svg',
-      category: 'Archaeological'
-    },
-    {
-      id: 3,
-      name: 'The Bund',
-      destination: 'Shanghai',
-      description: 'Iconic waterfront with colonial architecture',
-      image: '/placeholder.svg',
-      category: 'Architecture'
-    }
-  ];
+    const destinations = data.destinations.filter(dest =>
+      dest.name.toLowerCase().includes(query) ||
+      dest.description.toLowerCase().includes(query)
+    );
 
-  const filteredDestinations = destinations.filter(dest =>
-    dest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dest.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const routes = data.routes.filter(route =>
+      route.name.toLowerCase().includes(query) ||
+      route.startCity.toLowerCase().includes(query) ||
+      route.endCity.toLowerCase().includes(query) ||
+      route.tags.some(tag => tag.toLowerCase().includes(query))
+    );
 
-  const filteredRoutes = routes.filter(route =>
-    route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    route.startCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    route.endCity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    route.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+    const spots = data.spots.filter(spot =>
+      spot.name.toLowerCase().includes(query) ||
+      spot.destination.toLowerCase().includes(query) ||
+      spot.description.toLowerCase().includes(query)
+    );
 
-  const filteredSpots = spots.filter(spot =>
-    spot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    spot.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    spot.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    return { destinations, routes, spots };
+  }, [data, searchQuery]);
 
-  const hasResults = filteredDestinations.length > 0 || filteredRoutes.length > 0 || filteredSpots.length > 0;
-  const isSearching = searchQuery.length > 0;
-
-  const handleCardClick = (item: any, type: 'destination' | 'route' | 'spot') => {
+  const handleCardClick = (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => {
     setSelectedItem(item);
     setSelectedType(type);
     setIsDrawerOpen(true);
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
+  const isSearching = searchQuery.length > 0;
+  const hasResults = filteredData.destinations.length > 0 || filteredData.routes.length > 0 || filteredData.spots.length > 0;
 
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, 'gi');
-    const parts = text.split(regex);
-    return parts.map((part, index) => 
-      regex.test(part) ? (
-        <span key={index} className="text-purple-800 font-semibold">{part}</span>
-      ) : part
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="space-y-12">
+          {[
+            { title: 'Popular Destinations', icon: MapPin },
+            { title: 'Featured Spots', icon: Building2 },
+            { title: 'Recommended Routes', icon: Route },
+          ].map((section, index) => (
+            <section key={index}>
+              <div className="flex items-center gap-3 mb-6">
+                <section.icon className="w-6 h-6 text-primary" />
+                <h2 className="text-2xl font-bold text-foreground">{section.title}</h2>
+              </div>
+              <div className="flex space-x-6 overflow-x-auto pb-4 -mx-4 px-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 flex-shrink-0">
+                      <TravelCardSkeleton />
+                    </div>
+                  ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center py-12 text-destructive">
+          <AlertCircle className="mx-auto h-12 w-12" />
+          <h3 className="mt-2 text-lg font-medium">Failed to load data</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
+        </div>
+      );
+    }
+
+    if (isSearching && !hasResults) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground text-lg mb-2">No results found</div>
+          <div className="text-muted-foreground">Try adjusting your search terms</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-12">
+        {filteredData.destinations.length > 0 && (
+          <ContentSection
+            title={isSearching ? 'Destinations' : 'Popular Destinations'}
+            Icon={MapPin}
+            items={filteredData.destinations}
+            type="destination"
+            searchQuery={searchQuery}
+            onCardClick={handleCardClick}
+            showViewAll={!isSearching}
+          />
+        )}
+        {filteredData.spots.length > 0 && (
+          <ContentSection
+            title={isSearching ? 'Spots' : 'Featured Spots'}
+            Icon={Building2}
+            items={filteredData.spots}
+            type="spot"
+            searchQuery={searchQuery}
+            onCardClick={handleCardClick}
+            showViewAll={!isSearching}
+          />
+        )}
+        {filteredData.routes.length > 0 && (
+          <ContentSection
+            title={isSearching ? 'Routes' : 'Recommended Routes'}
+            Icon={Route}
+            items={filteredData.routes}
+            type="route"
+            searchQuery={searchQuery}
+            onCardClick={handleCardClick}
+            showViewAll={!isSearching}
+          />
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <TheHeader />
       
       <SearchBar 
@@ -156,136 +171,7 @@ const Explore = () => {
       />
 
       <div className="container mx-auto px-4 py-8">
-        {isSearching && !hasResults && (
-          <div className="text-center py-12">
-            <div className="text-muted-foreground text-lg mb-2">No results found</div>
-            <div className="text-muted-foreground">Try adjusting your search terms</div>
-          </div>
-        )}
-
-        {(!isSearching || hasResults) && (
-          <div className="space-y-12">
-            {/* Destinations Section */}
-            {(!isSearching || filteredDestinations.length > 0) && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <MapPin className="w-6 h-6 text-primary" />
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {isSearching ? 'Destinations' : 'Popular Destinations'}
-                  </h2>
-                </div>
-                <Carousel
-                  opts={{
-                    align: "start",
-                  }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-4">
-                    {(isSearching ? filteredDestinations : destinations.slice(0, 6)).map((destination) => (
-                      <CarouselItem key={destination.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                        <TravelCard 
-                          item={destination} 
-                          type="destination" 
-                          searchQuery={searchQuery} 
-                          onClick={handleCardClick}
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-                {!isSearching && (
-                  <div className="text-right mt-4">
-                    <Button variant="link" onClick={() => alert('Navigate to all destinations page')}>
-                      View All Destinations <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Spots Section */}
-            {(!isSearching || filteredSpots.length > 0) && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <Building2 className="w-6 h-6 text-primary" />
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {isSearching ? 'Spots' : 'Featured Spots'}
-                  </h2>
-                </div>
-                <Carousel
-                  opts={{
-                    align: "start",
-                  }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-4">
-                    {(isSearching ? filteredSpots : spots.slice(0, 6)).map((spot) => (
-                      <CarouselItem key={spot.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                        <TravelCard 
-                          item={spot} 
-                          type="spot" 
-                          searchQuery={searchQuery} 
-                          onClick={handleCardClick}
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-                {!isSearching && (
-                  <div className="text-right mt-4">
-                    <Button variant="link" onClick={() => alert('Navigate to all spots page')}>
-                      View All Spots <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Routes Section */}
-            {(!isSearching || filteredRoutes.length > 0) && (
-              <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <Route className="w-6 h-6 text-primary" />
-                  <h2 className="text-2xl font-bold text-foreground">
-                    {isSearching ? 'Routes' : 'Recommended Routes'}
-                  </h2>
-                </div>
-                <Carousel
-                  opts={{
-                    align: "start",
-                  }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-4">
-                    {(isSearching ? filteredRoutes : routes.slice(0, 6)).map((route) => (
-                      <CarouselItem key={route.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                        <TravelCard 
-                          item={route} 
-                          type="route" 
-                          searchQuery={searchQuery} 
-                          onClick={handleCardClick}
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-                {!isSearching && (
-                  <div className="text-right mt-4">
-                    <Button variant="link" onClick={() => alert('Navigate to all routes page')}>
-                      View All Routes <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </section>
-            )}
-          </div>
-        )}
+        {renderContent()}
       </div>
 
       <DetailDrawer
@@ -298,5 +184,65 @@ const Explore = () => {
     </div>
   );
 };
+
+type ContentSectionProps = {
+  title: string;
+  Icon: React.ElementType;
+  searchQuery: string;
+  showViewAll: boolean;
+} & (
+  | {
+      type: 'destination';
+      items: Destination[];
+      onCardClick: (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => void;
+    }
+  | {
+      type: 'route';
+      items: RouteType[];
+      onCardClick: (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => void;
+    }
+  | {
+      type: 'spot';
+      items: Spot[];
+      onCardClick: (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => void;
+    }
+);
+
+function ContentSection(props: ContentSectionProps) {
+  const { title, Icon, items, type, searchQuery, onCardClick, showViewAll } = props;
+  const navigate = useNavigate();
+
+  return (
+      <section>
+          <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                  <Icon className="w-6 h-6 text-primary" />
+                  <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+              </div>
+              {showViewAll && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/search?type=${type}`)}>
+                      View More <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+              )}
+          </div>
+        <Carousel opts={{ align: "start" }} className="w-full -ml-4">
+          <CarouselContent>
+            {items.map((item) => (
+              <CarouselItem key={item.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+                <TravelCard
+                  item={item}
+                  type={type as 'destination' | 'spot' | 'route'}
+                  searchQuery={searchQuery}
+                  onClick={onCardClick as any}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="ml-14" />
+          <CarouselNext className="mr-8" />
+        </Carousel>
+      </section>
+  );
+}
 
 export default Explore;

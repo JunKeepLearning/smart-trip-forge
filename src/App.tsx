@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import PricingPage from "./pages/PricingPage";
 import NotFound from "./pages/NotFound";
+import SearchResults from "./pages/SearchResults";
 
 const queryClient = new QueryClient();
 
@@ -23,17 +24,18 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/plan" element={<Plan />} />
-        <Route path="/plan/:tripId" element={<Itinerary />} />
+            <Route path="/plan/:tripId" element={<Itinerary />} />
             <Route path="/checklist" element={<Checklist />} />
             <Route path="/finance" element={<Finance />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/search" element={<SearchResults />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
