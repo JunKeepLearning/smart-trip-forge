@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserInfoCard } from '@/components/profile/UserInfoCard';
 import { SubscriptionCard } from '@/components/profile/SubscriptionCard';
@@ -21,9 +19,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50/50 dark:bg-background">
-      <TheHeader />
-      
+    <>
       <main className="flex-grow container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold tracking-tight mb-8 text-center">My Profile</h1>
         
@@ -42,8 +38,6 @@ export default function Profile() {
           </Button>
         </div>
       </main>
-
-      <TheFooter />
-    </div>
+    </>
   );
 }

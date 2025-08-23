@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import TheHeader from "@/components/TheHeader";
-import TheFooter from "@/components/TheFooter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -142,7 +140,7 @@ const Plan = () => {
       id: Date.now().toString(),
       name: `Trip to ${values.destination}`,
       destination: values.destination,
-      startDate: format(values.startDate, 'yyyy-MM-d'),
+      startDate: format(values.startDate, 'yyyy-MM-dd'),
       endDate: format(values.endDate, 'yyyy-MM-dd'),
       description: "",
       status: "Not Started",
@@ -156,9 +154,7 @@ const Plan = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <TheHeader />
-      
+    <>
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Plan Your Journey</h1>
@@ -259,8 +255,6 @@ const Plan = () => {
         </div>
       </main>
 
-      <TheFooter />
-
       {/* Create Trip Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent>
@@ -309,7 +303,7 @@ const Plan = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 };
 

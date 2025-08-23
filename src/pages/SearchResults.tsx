@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useUI } from '@/contexts/UIContext';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
 import { useExploreData } from '@/hooks/useExploreData';
@@ -22,10 +21,7 @@ const SearchResults = () => {
   const type = searchParams.get('type') as 'destination' | 'spot' | 'route' | null;
   const [searchQuery, setSearchQuery] = useState(query);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [selectedItem, setSelectedItem] = useState<Destination | Spot | RouteType | null>(null);
-  const [selectedType, setSelectedType] = useState<'destination' | 'route' | 'spot'>('destination');
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { openDrawer } = useUI();
 
   const { data: recommendedData, loading: loadingRecommended } = useExploreData();
   const { data: myData, loading: loadingMy } = useMyData();
@@ -75,9 +71,7 @@ const SearchResults = () => {
     let itemType: 'destination' | 'route' | 'spot' = 'destination';
     if ('startCity' in item) itemType = 'route';
     if ('category' in item) itemType = 'spot';
-    setSelectedItem(item);
-    setSelectedType(itemType);
-    setIsDrawerOpen(true);
+    openDrawer(item, itemType);
   };
 
   const handleBack = () => {
@@ -161,8 +155,7 @@ const SearchResults = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <TheHeader />
+    <>
       <main className="flex-grow">
         <SearchBar
           searchQuery={searchQuery}
@@ -179,14 +172,8 @@ const SearchResults = () => {
           )}
         </div>
       </main>
-      <DetailDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        item={selectedItem}
-        type={selectedType}
-      />
-      <TheFooter />
-    </div>
+      <DetailDrawer />
+    </>
   );
 };
 

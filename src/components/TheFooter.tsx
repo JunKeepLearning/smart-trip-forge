@@ -8,7 +8,7 @@ export default function TheFooter() {
     // Footer container with responsive visibility
     // - `hidden`: Hidden by default (on mobile screens)
     // - `lg:flex`: Becomes a flex container on large screens (1024px) and up
-    <footer className="hidden lg:flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <footer className="hidden h-16 lg:flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto py-4">
         <div className="flex justify-between items-center">
           {/* Copyright notice */}

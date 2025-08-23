@@ -7,8 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
 import { 
   Plus, 
   Bot, 
@@ -124,9 +122,7 @@ const Checklist = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <TheHeader />
-      
+    <>
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Title and Action Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -286,8 +282,7 @@ const Checklist = () => {
           )}
         </DrawerContent>
       </Drawer>
-      <TheFooter />
-    </div>
+    </>
   );
 };
 

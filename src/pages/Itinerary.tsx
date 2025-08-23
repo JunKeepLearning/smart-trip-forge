@@ -1,6 +1,5 @@
 import { useState } from "react";
-import TheHeader from "@/components/TheHeader";
-import TheFooter from "@/components/TheFooter";
+
 import { useParams } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -129,7 +128,6 @@ const Itinerary = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <TheHeader />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Beijing Cultural Journey</h1>
@@ -174,7 +172,6 @@ const Itinerary = () => {
           </div>
         </div>
       </main>
-      <TheFooter />
 
       {/* Item Form Dialog */}
       <Dialog open={isItemFormOpen} onOpenChange={setItemFormOpen}>

@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
@@ -63,9 +61,7 @@ const Finance = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <TheHeader />
-      
+    <>
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
@@ -295,8 +291,7 @@ const Finance = () => {
         </DrawerContent>
       </Drawer>
 
-      <TheFooter />
-    </div>
+    </>
   );
 };
 

@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { useUI } from '@/contexts/UIContext';
 import { Button } from '@/components/ui/button';
 import { MapPin, Route, Building2, ArrowRight, AlertCircle } from 'lucide-react';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
 import {
@@ -20,9 +19,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<Destination | Spot | RouteType | null>(null);
-  const [selectedType, setSelectedType] = useState<'destination' | 'route' | 'spot'>('destination');
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { openDrawer } = useUI();
   const navigate = useNavigate();
 
   const { data, loading, error } = useExploreData();
@@ -67,9 +64,7 @@ const Explore = () => {
   }, [data, searchQuery]);
 
   const handleCardClick = (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => {
-    setSelectedItem(item);
-    setSelectedType(type);
-    setIsDrawerOpen(true);
+    openDrawer(item, type);
   };
 
   const isSearching = searchQuery.length > 0;
@@ -161,9 +156,7 @@ const Explore = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <TheHeader />
-      
+    <>
       <SearchBar 
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -174,14 +167,8 @@ const Explore = () => {
         {renderContent()}
       </div>
 
-      <DetailDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        item={selectedItem}
-        type={selectedType}
-      />
-      <TheFooter />
-    </div>
+      <DetailDrawer />
+    </>
   );
 };
 
@@ -228,7 +215,7 @@ function ContentSection(props: ContentSectionProps) {
         <Carousel opts={{ align: "start" }} className="w-full -ml-4">
           <CarouselContent>
             {items.map((item) => (
-              <CarouselItem key={item.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+              <CarouselItem key={item.id} className="pl-4 basis-2/3 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
                 <TravelCard
                   item={item}
                   type={type as 'destination' | 'spot' | 'route'}

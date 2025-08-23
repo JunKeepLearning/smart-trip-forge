@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useUI } from '@/contexts/UIContext';
 import { 
   X, 
   MapPin, 
@@ -14,19 +15,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface DetailDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  item: any;
-  type: 'destination' | 'route' | 'spot';
-}
+const DetailDrawer: React.FC = () => {
+  const { drawer, closeDrawer } = useUI();
+  const { isOpen, item, type } = drawer;
 
-const DetailDrawer: React.FC<DetailDrawerProps> = ({
-  isOpen,
-  onClose,
-  item,
-  type
-}) => {
   if (!isOpen || !item) return null;
 
   const renderDestinationContent = () => (
@@ -195,7 +187,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           "fixed inset-0 bg-black/50 z-50 transition-opacity",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={closeDrawer}
       />
       
       {/* Drawer */}
@@ -217,7 +209,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onClose}
+            onClick={closeDrawer}
             className="h-8 w-8 p-0"
           >
             <X className="w-4 h-4" />
