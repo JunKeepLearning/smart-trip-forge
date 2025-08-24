@@ -2,7 +2,7 @@
 // 导入 React 库，用于组件开发
 import React from 'react';
 // 导入 Link 组件，用于在应用内进行路由导航
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 // 导入自定义的 Button 组件
 import { Button } from '@/components/ui/button';
 // 从 lucide-react 库导入图标，用于界面元素
@@ -30,11 +30,11 @@ const TheHeader = () => {
 
   // 返回头部组件的 JSX
   return (
-    <header className="bg-card border-b border-border">
+    <header className="fixed top-0 left-0 right-0 bg-card border-b border-border z-40 h-header-height">
       {/* 容器，设置最大宽度、内外边距 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         {/* Flex 布局，用于排列 Logo、导航和用户菜单 */}
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center">
           {/* Logo，链接到首页 */}
           <Link to="/" className="text-xl font-bold text-primary">
             travelplan
@@ -44,14 +44,20 @@ const TheHeader = () => {
           <nav className="hidden md:flex items-center space-x-8">
             {/* 遍历导航项，生成导航链接 */}
             {navLinks.map((item) => (
-              <Link
+              <NavLink
                 key={item.label}
                 to={item.href}
-                className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors duration-200"
+                className={({ isActive }) =>
+                  `flex items-center space-x-2 transition-colors duration-200 ${
+                    isActive
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-primary'
+                  }`
+                }
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
-              </Link>
+              </NavLink>
             ))}
           </nav>
 

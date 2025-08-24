@@ -136,18 +136,13 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 relative">
       {/* Responsive Return/Close Button */}
-      <Link to="/" className="absolute top-4 right-4 md:hidden">
+      <Link to="/" className="absolute top-4 right-4">
         <Button variant="ghost" size="icon">
           <X className="h-6 w-6" />
         </Button>
       </Link>
 
-      {/* App Logo/Name Link for Desktop */}
-      <div className="hidden md:block mb-8">
-        <Link to="/" className="text-3xl font-bold text-primary hover:text-primary/80 transition-colors">
-          travelplan
-        </Link>
-      </div>
+      
 
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">

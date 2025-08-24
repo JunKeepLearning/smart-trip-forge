@@ -29,6 +29,19 @@ const Index = () => {
         </div>
         
         <FeatureCards />
+
+        {/* New About Section */}
+        <section className="py-8 text-center">
+          <div className="max-w-2xl mx-auto px-4">
+            <h2 className="text-xl md:text-2xl text-foreground mb-6">
+              A Traveler's Heart
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              With a bamboo staff and light straw sandals, through mist and rain, I walk life’s journeys—again and again.<br />
+              I’m a traveler myself, and I built this little tool to help you explore with ease.
+            </p>
+          </div>
+        </section>
       </main>
     </>
   );
