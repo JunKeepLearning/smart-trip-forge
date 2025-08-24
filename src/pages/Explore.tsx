@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useUI } from '@/contexts/UIContext';
 import { Button } from '@/components/ui/button';
-import { MapPin, Route, Building2, ArrowRight, AlertCircle } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { MapPin, Route, Building2, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
 import {
@@ -15,7 +16,7 @@ import TravelCard from '@/components/TravelCard';
 import TravelCardSkeleton from '@/components/TravelCardSkeleton';
 import { useExploreData } from '@/hooks/useExploreData';
 import { Destination, Spot, Route as RouteType } from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +119,24 @@ const Explore = () => {
 
     return (
       <div className="space-y-12">
+        {!isSearching && (
+          <Card className="bg-primary/10 border-primary/20">
+            <CardContent className="p-6 flex items-center gap-4 sm:gap-6">
+              <div className="hidden sm:block p-3 border border-primary/20 rounded-full bg-background">
+                <Info className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-grow">
+                <h3 className="text-lg font-semibold text-foreground">First time in China?</h3>
+                <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+                  Check out our essential guide for tips on VPNs, payments, and more.
+                </p>
+              </div>
+              <Button asChild className="ml-auto flex-shrink-0">
+                <Link to="/guides/first-time-china">View Guide</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {filteredData.destinations.length > 0 && (
           <ContentSection
             title={isSearching ? 'Destinations' : 'Popular Destinations'}

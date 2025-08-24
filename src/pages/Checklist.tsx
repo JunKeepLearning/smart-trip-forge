@@ -15,7 +15,7 @@ import {
   Trash2, 
   ChevronDown, 
   Shirt, 
-  Heart, 
+  Star, 
   Smartphone, 
   Download,
   Save
@@ -67,7 +67,7 @@ const Checklist = () => {
         {
           id: 'toiletries',
           name: 'Toiletries & Health',
-          icon: Heart,
+          icon: Star,
           items: [
             { id: '6', name: 'Toothbrush', checked: true },
             { id: '7', name: 'Toothpaste', checked: true },

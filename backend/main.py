@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.pois_tianditu import router as pois_tianditu_router
-from app.api.pois_gaode import router as pois_gaode_router
+
 from app.api.data_api import router as data_router
-from app.api.regions import router as regions_router
+
+from app.api.favorites_api import router as favorites_router
 import time
 from app.utils.logger import setup_logger
 
@@ -28,10 +28,10 @@ app.add_middleware(
 )
 
 # ---------------- 路由注册 ----------------
-app.include_router(pois_tianditu_router, prefix="/pois_tianditu", tags=["pois_tianditu"])
-app.include_router(pois_gaode_router, prefix="/pois_gaode", tags=["pois_gaode"])
+
 app.include_router(data_router, prefix="/data", tags=["data"])
-app.include_router(regions_router, prefix="/regions", tags=["regions"])
+
+app.include_router(favorites_router, prefix="/api", tags=["Favorites"])
 
 # 根路由
 @app.get("/", summary="Root Endpoint", description="A simple root endpoint to check if the API is running.")

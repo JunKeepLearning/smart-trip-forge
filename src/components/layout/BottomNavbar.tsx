@@ -22,7 +22,7 @@ const BottomNavbar: React.FC<BottomNavbarProps> = ({ isDrawerOpen }) => {
             className={({ isActive }) =>
               `flex flex-col items-center justify-center w-full pt-2 pb-1 text-xs transition-colors ${
                 isActive
-                  ? 'text-primary'
+                  ? 'text-primary fill-primary'
                   : 'text-muted-foreground hover:text-primary'
               }`
             }

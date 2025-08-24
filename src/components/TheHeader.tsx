@@ -6,7 +6,7 @@ import { Link, NavLink } from 'react-router-dom';
 // 导入自定义的 Button 组件
 import { Button } from '@/components/ui/button';
 // 从 lucide-react 库导入图标，用于界面元素
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Star } from 'lucide-react';
 // 导入 useAuth 自定义钩子，用于访问认证上下文
 import { useAuth } from '@/contexts/AuthContext';
 // 导入下拉菜单相关组件
@@ -50,7 +50,7 @@ const TheHeader = () => {
                 className={({ isActive }) =>
                   `flex items-center space-x-2 transition-colors duration-200 ${
                     isActive
-                      ? 'text-primary'
+                      ? 'text-primary fill-primary'
                       : 'text-muted-foreground hover:text-primary'
                   }`
                 }
@@ -85,6 +85,12 @@ const TheHeader = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-favorites">
+                      <Star className="mr-2 h-4 w-4" />
+                      <span>My Favorites</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/profile">
                       <Settings className="mr-2 h-4 w-4" />

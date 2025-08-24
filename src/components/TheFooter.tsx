@@ -17,6 +17,9 @@ export default function TheFooter() {
           </p>
           {/* Footer links */}
           <div className="flex items-center space-x-6 text-sm">
+            <Link to="/guides/first-time-china" className="text-muted-foreground hover:text-primary transition-colors">
+              China Travel Guide
+            </Link>
             <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
               About Us
             </Link>

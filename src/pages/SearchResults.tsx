@@ -4,8 +4,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
 import { useExploreData } from '@/hooks/useExploreData';
-import { useMyData } from '@/hooks/useMyData';
-import { Destination, Spot, Route as RouteType } from '@/lib/api';
+import { getMyFavoritesDetails, Destination, Spot, Route as RouteType } from '@/lib/api';
 import ResultCard from '@/components/ResultCard';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
@@ -24,7 +23,24 @@ const SearchResults = () => {
   const { openDrawer } = useUI();
 
   const { data: recommendedData, loading: loadingRecommended } = useExploreData();
-  const { data: myData, loading: loadingMy } = useMyData();
+  
+  const [myFavorites, setMyFavorites] = useState<(Destination | Spot | RouteType)[]>([]);
+  const [loadingMy, setLoadingMy] = useState(true);
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      setLoadingMy(true);
+      try {
+        const favs = await getMyFavoritesDetails();
+        setMyFavorites(favs);
+      } catch (error) {
+        console.error("Failed to load favorite details:", error);
+      } finally {
+        setLoadingMy(false);
+      }
+    };
+    loadFavorites();
+  }, []);
 
   const isSearchMode = query.length > 0;
 
@@ -38,7 +54,7 @@ const SearchResults = () => {
     );
   }
   const filteredRecommended = useMemo(() => filterItems(recommendedData ? [...recommendedData.destinations, ...recommendedData.routes, ...recommendedData.spots] : [], query), [recommendedData, query]);
-  const filteredMy = useMemo(() => filterItems(myData?.myFavorites, query), [myData, query]);
+  const filteredMy = useMemo(() => filterItems(myFavorites, query), [myFavorites, query]);
 
   // --- Data & Logic for List Mode ---
   const singleTypeData = useMemo(() => {

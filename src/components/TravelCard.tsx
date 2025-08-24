@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Route, Building2, Calendar } from 'lucide-react';
-import { Destination, Spot, Route as RouteType } from '@/lib/api';
+import { MapPin, Route, Building2, Calendar, Star } from 'lucide-react';
+import { Destination, Spot, Route as RouteType, FavoriteItemType } from '@/lib/api';
+import { useFavorites } from '@/contexts/FavoritesContext';
 
 // Define props for each card type using a discriminated union
 type TravelCardBaseProps = {
@@ -41,19 +42,33 @@ const highlightMatch = (text: string, query: string) => {
   );
 };
 
+// Favorite Button Component
+const FavoriteButton = ({ item_id, item_type }: { item_id: string, item_type: FavoriteItemType }) => {
+  const { isFavorited, addFavorite, removeFavorite } = useFavorites();
+  const favorited = isFavorited(item_id, item_type);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (favorited) {
+      removeFavorite(item_id, item_type);
+    } else {
+      addFavorite(item_id, item_type);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleFavoriteClick}
+      className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/75 transition-colors z-10"
+      aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+    >
+      <Star className={`w-5 h-5 transition-all ${favorited ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+    </button>
+  );
+};
+
 const TravelCard: React.FC<TravelCardProps> = (props) => {
   const { type, item, searchQuery } = props;
-
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, 'gi');
-    const parts = text.split(regex);
-    return parts.map((part, index) =>
-      regex.test(part) ? (
-        <span key={index} className="text-purple-800 font-semibold">{part}</span>
-      ) : part
-    );
-  };
 
   const renderContent = () => {
     switch (type) {
@@ -61,77 +76,82 @@ const TravelCard: React.FC<TravelCardProps> = (props) => {
         return (
           <>
             <div className="aspect-w-3 aspect-h-2 bg-gray-100 rounded-t-xl overflow-hidden relative">
+              <FavoriteButton item_id={item.id} item_type={type} />
               <img
                 src={item.image}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
-              <div className="absolute top-2 left-2 flex items-center gap-1">
-                <MapPin className="w-4 h-4 text-purple-800" />
-                <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute top-2 left-2">
+                <Badge variant="outline" className="text-xs bg-white/90 text-purple-800 border-purple-800 backdrop-blur-sm">
+                  <MapPin className="w-3 h-3 mr-1.5" />
                   Destination
                 </Badge>
               </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <CardTitle className="text-lg font-bold text-white">
+                  {highlightMatch(item.name, searchQuery)}
+                </CardTitle>
+              </div>
             </div>
-            <CardHeader className="flex-grow p-4">
-              <CardTitle className="text-lg font-bold text-gray-900">
-                {highlightMatch(item.name, searchQuery)}
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-600">
+            <div className="p-4 flex-grow flex flex-col">
+              <CardDescription className="text-sm text-gray-600 mb-3 flex-grow">
                 {highlightMatch(item.description, searchQuery)}
               </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 px-4 pb-4">
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2">
                 {item.highlights.map((highlight: string, index: number) => (
                   <Badge key={index} variant="secondary" className="text-xs">
                     {highlight}
                   </Badge>
                 ))}
               </div>
-            </CardContent>
+            </div>
           </>
         );
       case 'spot':
         return (
           <>
             <div className="aspect-w-3 aspect-h-2 bg-gray-100 rounded-t-xl overflow-hidden relative">
+              <FavoriteButton item_id={item.id} item_type={type} />
               <img
                 src={item.image}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
-              <div className="absolute top-2 left-2 flex items-center gap-1">
-                <Building2 className="w-4 h-4 text-purple-800" />
-                <Badge variant="outline" className="text-xs border-purple-800 text-purple-800">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute top-2 left-2">
+                <Badge variant="outline" className="text-xs bg-white/90 text-purple-800 border-purple-800 backdrop-blur-sm">
+                  <Building2 className="w-3 h-3 mr-1.5" />
                   Spot
                 </Badge>
               </div>
-            </div>
-            <CardHeader className="flex-grow p-4">
-              <CardTitle className="text-lg font-bold text-gray-900">
-                {highlightMatch(item.name, searchQuery)}
-              </CardTitle>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                <MapPin className="w-4 h-4" />
-                <span>{item.destination}</span>
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <CardTitle className="text-lg font-bold text-white">
+                  {highlightMatch(item.name, searchQuery)}
+                </CardTitle>
+                <div className="flex items-center gap-2 text-sm text-gray-200 mt-1">
+                  <MapPin className="w-4 h-4" />
+                  <span>{item.destination}</span>
+                </div>
               </div>
-              <CardDescription className="text-sm text-gray-600">
+            </div>
+            <div className="p-4 flex-grow flex flex-col">
+              <CardDescription className="text-sm text-gray-600 mb-3 flex-grow">
                 {highlightMatch(item.description, searchQuery)}
               </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 px-4 pb-4">
               <div className="flex items-center justify-between">
                 <Badge variant="secondary" className="text-xs">
                   {item.category}
                 </Badge>
               </div>
-            </CardContent>
+            </div>
           </>
         );
       case 'route':
         return (
           <>
+            <FavoriteButton item_id={item.id} item_type={type} />
             <CardHeader className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Route className="w-4 h-4 text-purple-800" />

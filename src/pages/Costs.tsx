@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Calculator, Users, Copy, Download, Plus, Minus, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const Finance = () => {
+const Costs = () => {
   const [budgetDrawerOpen, setBudgetDrawerOpen] = useState(false);
   const [expenseDrawerOpen, setExpenseDrawerOpen] = useState(false);
   const [budgetData, setBudgetData] = useState({
@@ -65,7 +65,7 @@ const Finance = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Travel Finance</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Travel Costs</h1>
             <p className="text-muted-foreground">Manage your travel budget and split expenses with ease</p>
           </div>
 
@@ -295,4 +295,4 @@ const Finance = () => {
   );
 };
 
-export default Finance;
+export default Costs;
