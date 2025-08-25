@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { UIProvider } from "@/contexts/UIContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { TripsProvider } from "@/contexts/TripsContext";
+import { ChecklistsProvider } from "@/contexts/ChecklistsContext";
 
 // Layouts
 import MainLayout from "@/components/layout/MainLayout";
@@ -20,6 +21,7 @@ import Plan from '@/pages/Plan';
 import Costs from '@/pages/Costs';
 import Itinerary from '@/pages/Itinerary';
 import Checklist from '@/pages/Checklist';
+import ChecklistDetail from '@/pages/ChecklistDetail';
 import Login from "@/pages/Login";
 import Profile from "@/pages/Profile";
 import PricingPage from "@/pages/PricingPage";
@@ -36,6 +38,7 @@ const App = () => (
       <UIProvider>
         <FavoritesProvider>
           <TripsProvider>
+            <ChecklistsProvider>
             <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -49,6 +52,7 @@ const App = () => (
                   <Route path="/plan" element={<Plan />} />
                   <Route path="/plan/:tripId" element={<Itinerary />} />
                   <Route path="/checklist" element={<Checklist />} />
+                  <Route path="/checklist/:checklistId" element={<ChecklistDetail />} />
                   <Route path="/costs" element={<Costs />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/my-favorites" element={<MyFavorites />} />
@@ -65,6 +69,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+          </ChecklistsProvider>
           </TripsProvider>
         </FavoritesProvider>
       </UIProvider>
