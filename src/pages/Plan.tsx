@@ -13,6 +13,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CreateTripForm, type CreateTripFormValues } from "@/components/CreateTripForm";
+import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
 import { useTrips, Trip, DayPlan } from "@/contexts/TripsContext";
@@ -26,6 +27,8 @@ const Plan = () => {
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
+  const [isAddCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   // Helper functions
   const calculateDuration = (startDate: string, endDate: string) => {
@@ -66,6 +69,11 @@ const Plan = () => {
     });
     setCreateDialogOpen(false);
     navigate(`/plan/${newTrip.id}`);
+  };
+
+  const handleAddCollaborator = (tripId: string) => {
+    setSelectedTripId(tripId);
+    setAddCollaboratorOpen(true);
   };
 
   return (
@@ -151,7 +159,7 @@ const Plan = () => {
                                 </Avatar>
                               )}
                             </div>
-                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full ml-2" onClick={(e) => { e.stopPropagation(); alert('Add participant feature to be implemented'); }}>
+                            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full ml-2" onClick={(e) => { e.stopPropagation(); handleAddCollaborator(trip.id); }}>
                               <UserPlus className="h-4 w-4" />
                             </Button>
                           </div>
@@ -159,7 +167,7 @@ const Plan = () => {
                       </Card>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
-                      <ContextMenuItem onClick={() => alert('Add participant feature to be implemented')}>
+                      <ContextMenuItem onClick={(e) => { e.stopPropagation(); handleAddCollaborator(trip.id); }}>
                         <UserPlus className="mr-2 h-4 w-4" />
                         <span>Add Participant</span>
                       </ContextMenuItem>
@@ -200,6 +208,12 @@ const Plan = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Collaborator Dialog */}
+      <AddCollaboratorDialog 
+        open={isAddCollaboratorOpen}
+        onOpenChange={setAddCollaboratorOpen}
+      />
     </>
   );
 };

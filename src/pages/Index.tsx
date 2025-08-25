@@ -37,8 +37,9 @@ const Index = () => {
               A Traveler's Heart
             </h2>
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-              With a bamboo staff and light straw sandals, through mist and rain, I walk life’s journeys—again and again.<br />
-              I’m a traveler myself, and I built this little tool to help you explore with ease.
+              "With a bamboo staff and light straw sandals, through mist and rain, I walk life's journeys—again and again.<br />
+              I'm a traveler myself, and I built this little tool to help you explore with ease.<br />
+              See you down the road!"
             </p>
           </div>
         </section>

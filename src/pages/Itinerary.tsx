@@ -311,7 +311,7 @@ const Itinerary = () => {
             {itinerary.map(day => (
                 <Button key={day.id} variant={activeAccordion === day.id ? "secondary" : "ghost"} onClick={() => handleNavClick(day.id)}>DAY {day.day}</Button>
             ))}
-            <Button variant={activeAccordion === "tobeplanned" ? "secondary" : "ghost"} onClick={() => handleNavClick("tobeplanned")}>代规划</Button>
+            <Button variant={activeAccordion === "tobeplanned" ? "secondary" : "ghost"} onClick={() => handleNavClick("tobeplanned")}>To Be Planned</Button>
             <Button variant="outline" size="icon" className="h-8 w-8 rounded-full ml-2" onClick={handleAddDay}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -360,7 +360,7 @@ const Itinerary = () => {
           ))}
 
           <AccordionItem value="tobeplanned" ref={el => sectionRefs.current['tobeplanned'] = el}>
-            <AccordionTrigger>代规划</AccordionTrigger>
+            <AccordionTrigger>To Be Planned</AccordionTrigger>
             <AccordionContent>
               <div className="p-4 bg-card rounded-lg">
                 <h3 className="text-lg font-semibold">To Be Planned</h3>

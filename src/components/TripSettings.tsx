@@ -15,6 +15,7 @@ import { Trash2, Image, User, Shield, CalendarIcon, ArrowRightLeft } from 'lucid
 import { DateRange } from 'react-day-picker';
 import { format, parseISO, addDays, differenceInCalendarDays } from 'date-fns';
 import { cn } from '@/lib/utils';
+import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
 
 const TripSettings = ({ trip, open, onOpenChange, onSave, onDelete }) => {
   if (!trip) return null;
@@ -32,6 +33,7 @@ const TripSettings = ({ trip, open, onOpenChange, onSave, onDelete }) => {
   const [dateInputMode, setDateInputMode] = useState<'duration' | 'dates'>('duration');
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [isPrivacyAlertOpen, setPrivacyAlertOpen] = useState(false);
+  const [isAddCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 
   // Effect to sync dates when duration changes
   useEffect(() => {
@@ -210,7 +212,7 @@ const TripSettings = ({ trip, open, onOpenChange, onSave, onDelete }) => {
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline"><User className="w-4 h-4 mr-2" /> Invite Collaborator</Button>
+                  <Button variant="outline" onClick={() => setAddCollaboratorOpen(true)}><User className="w-4 h-4 mr-2" /> Invite Collaborator</Button>
                 </div>
               )}
 
@@ -263,6 +265,11 @@ const TripSettings = ({ trip, open, onOpenChange, onSave, onDelete }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddCollaboratorDialog 
+        open={isAddCollaboratorOpen}
+        onOpenChange={setAddCollaboratorOpen}
+      />
     </>
   );
 };

@@ -4,9 +4,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from '@/components/ui/use-toast';
 import { 
   Plus, 
   Bot, 
@@ -30,7 +52,7 @@ interface ChecklistItem {
 interface ChecklistCategory {
   id: string;
   name: string;
-  icon: React.ComponentType<any>;
+  icon: string; // Use string for icon name
   items: ChecklistItem[];
 }
 
@@ -41,12 +63,29 @@ interface Checklist {
   categories: ChecklistCategory[];
 }
 
+const iconMap: { [key: string]: React.ComponentType<any> } = {
+  Shirt,
+  Star,
+  Smartphone,
+};
+
+const getIconComponent = (iconName: string) => {
+  return iconMap[iconName] || Package;
+};
+
 const Checklist = () => {
+  const { toast } = useToast();
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [checklistToDelete, setChecklistToDelete] = useState<string | null>(null);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemCategory, setNewItemCategory] = useState("");
+  const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
+  const [editingChecklist, setEditingChecklist] = useState<Partial<Checklist> | null>(null);
 
-  // Mock data
-  const checklists: Checklist[] = [
+  const [checklists, setChecklists] = useState<Checklist[]>([
     {
       id: '1',
       name: 'European Summer Trip',
@@ -55,7 +94,7 @@ const Checklist = () => {
         {
           id: 'clothing',
           name: 'Clothing',
-          icon: Shirt,
+          icon: 'Shirt',
           items: [
             { id: '1', name: 'Underwear (7 pairs)', checked: true },
             { id: '2', name: 'T-shirts (5)', checked: true },
@@ -67,7 +106,7 @@ const Checklist = () => {
         {
           id: 'toiletries',
           name: 'Toiletries & Health',
-          icon: Star,
+          icon: 'Star',
           items: [
             { id: '6', name: 'Toothbrush', checked: true },
             { id: '7', name: 'Toothpaste', checked: true },
@@ -79,7 +118,7 @@ const Checklist = () => {
         {
           id: 'electronics',
           name: 'Electronics',
-          icon: Smartphone,
+          icon: 'Smartphone',
           items: [
             { id: '11', name: 'Phone charger', checked: true },
             { id: '12', name: 'Camera', checked: false },
@@ -97,7 +136,7 @@ const Checklist = () => {
         {
           id: 'clothing',
           name: 'Clothing',
-          icon: Shirt,
+          icon: 'Shirt',
           items: [
             { id: '15', name: 'Business suits (2)', checked: false },
             { id: '16', name: 'Dress shirts (3)', checked: true },
@@ -106,7 +145,7 @@ const Checklist = () => {
         }
       ]
     }
-  ];
+  ]);
 
   const getChecklistProgress = (checklist: Checklist) => {
     const totalItems = checklist.categories.reduce((sum, cat) => sum + cat.items.length, 0);
@@ -117,8 +156,121 @@ const Checklist = () => {
   };
 
   const openChecklist = (checklist: Checklist) => {
-    setSelectedChecklist(checklist);
+    setSelectedChecklist(JSON.parse(JSON.stringify(checklist)));
     setIsDrawerOpen(true);
+  };
+
+  const handleCheckItem = (categoryId: string, itemId: string, checked: boolean) => {
+    if (!selectedChecklist) return;
+
+    const updatedChecklist = { ...selectedChecklist };
+    const category = updatedChecklist.categories.find(c => c.id === categoryId);
+    if (category) {
+      const item = category.items.find(i => i.id === itemId);
+      if (item) {
+        item.checked = checked;
+        setSelectedChecklist(updatedChecklist);
+      }
+    }
+  };
+
+  const handleSaveChanges = () => {
+    if (!selectedChecklist) return;
+
+    setChecklists(checklists.map(c => c.id === selectedChecklist.id ? selectedChecklist : c));
+    setIsDrawerOpen(false);
+    toast({
+      title: "Changes saved",
+      description: "Your checklist has been updated.",
+    });
+  };
+
+  const openDeleteDialog = (e: React.MouseEvent, checklistId: string) => {
+    e.stopPropagation();
+    setChecklistToDelete(checklistId);
+    setIsAlertOpen(true);
+  };
+
+  const handleDeleteChecklist = () => {
+    if (!checklistToDelete) return;
+    setChecklists(checklists.filter(c => c.id !== checklistToDelete));
+    toast({
+      title: "Checklist deleted",
+      description: "The checklist has been successfully deleted.",
+    });
+    setIsAlertOpen(false);
+    setChecklistToDelete(null);
+  };
+
+  const handleAddItem = () => {
+    if (!selectedChecklist || !newItemName || !newItemCategory) return;
+
+    const updatedChecklist = { ...selectedChecklist };
+    const category = updatedChecklist.categories.find(c => c.id === newItemCategory);
+    if (category) {
+      category.items.push({
+        id: crypto.randomUUID(),
+        name: newItemName,
+        checked: false,
+      });
+      setSelectedChecklist(updatedChecklist);
+    }
+    setNewItemName("");
+    setNewItemCategory("");
+    setIsAddItemDialogOpen(false);
+    toast({
+      title: "Item added",
+      description: "The new item has been added to your checklist.",
+    })
+  };
+
+  const handleClearChecked = () => {
+    if (!selectedChecklist) return;
+
+    const updatedChecklist = { ...selectedChecklist };
+    updatedChecklist.categories.forEach(category => {
+      category.items = category.items.filter(item => !item.checked);
+    });
+    setSelectedChecklist(updatedChecklist);
+    toast({
+      title: "Checked items cleared",
+      description: "All packed items have been removed from the list.",
+    })
+  };
+
+  const handleNewChecklist = () => {
+    setEditingChecklist({});
+    setIsChecklistDialogOpen(true);
+  };
+
+  const handleEditChecklist = (e: React.MouseEvent, checklist: Checklist) => {
+    e.stopPropagation();
+    setEditingChecklist(JSON.parse(JSON.stringify(checklist)));
+    setIsChecklistDialogOpen(true);
+  };
+
+  const handleSaveChecklist = () => {
+    if (!editingChecklist) return;
+
+    if (editingChecklist.id) { // Existing checklist
+      setChecklists(checklists.map(c => c.id === editingChecklist.id ? (editingChecklist as Checklist) : c));
+      toast({ title: "Checklist updated" });
+    } else { // New checklist
+      const newChecklist: Checklist = {
+        id: crypto.randomUUID(),
+        name: editingChecklist.name || "Untitled Checklist",
+        tags: editingChecklist.tags || [],
+        categories: [
+          { id: 'clothing', name: 'Clothing', icon: 'Shirt', items: [] },
+          { id: 'toiletries', name: 'Toiletries & Health', icon: 'Star', items: [] },
+          { id: 'electronics', name: 'Electronics', icon: 'Smartphone', items: [] },
+        ],
+      };
+      setChecklists([...checklists, newChecklist]);
+      toast({ title: "Checklist created" });
+    }
+    setIsChecklistDialogOpen(false);
+    setEditingChecklist(null);
   };
 
   return (
@@ -136,15 +288,15 @@ const Checklist = () => {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
               <Plus className="w-4 h-4 mr-2" />
               New Checklist
             </Button>
-            <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
+            <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" onClick={() => toast({ title: "Coming Soon!", description: "AI Checklist feature is under development." })}>
               <Bot className="w-4 h-4 mr-2" />
               AI Checklist
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => toast({ title: "Coming Soon!", description: "Template feature is under development." })}>
               <Package className="w-4 h-4 mr-2" />
               Templates
             </Button>
@@ -177,10 +329,15 @@ const Checklist = () => {
                   </div>
                   
                   <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={(e) => handleEditChecklist(e, checklist)}>
                       <Edit className="w-3 h-3" />
                     </Button>
-                    <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-destructive hover:text-destructive"
+                      onClick={(e) => openDeleteDialog(e, checklist.id)}
+                    >
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
@@ -200,7 +357,7 @@ const Checklist = () => {
             <p className="text-muted-foreground mb-6">
               You haven't created any trips yet, click above to start!
             </p>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Checklist
             </Button>
@@ -219,11 +376,13 @@ const Checklist = () => {
               
               <div className="flex-1 overflow-y-auto px-6">
                 <div className="space-y-4">
-                  {selectedChecklist.categories.map((category) => (
+                  {selectedChecklist.categories.map((category) => {
+                    const IconComponent = getIconComponent(category.icon);
+                    return (
                     <Collapsible key={category.id} defaultOpen>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
                         <div className="flex items-center gap-2">
-                          <category.icon className="w-5 h-5 text-primary" />
+                          <IconComponent className="w-5 h-5 text-primary" />
                           <span className="font-medium">{category.name}</span>
                         </div>
                         <ChevronDown className="w-4 h-4" />
@@ -235,6 +394,7 @@ const Checklist = () => {
                             <Checkbox 
                               id={item.id}
                               checked={item.checked}
+                              onCheckedChange={(checked) => handleCheckItem(category.id, item.id, !!checked)}
                               className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                             />
                             <label 
@@ -249,7 +409,7 @@ const Checklist = () => {
                         ))}
                       </CollapsibleContent>
                     </Collapsible>
-                  ))}
+                  )})}
                 </div>
               </div>
 
@@ -257,23 +417,68 @@ const Checklist = () => {
               
               {/* Bottom Actions */}
               <div className="p-6 space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
+                <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add a new item</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                          Name
+                        </Label>
+                        <Input
+                          id="name"
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="category" className="text-right">
+                          Category
+                        </Label>
+                        <Select value={newItemCategory} onValueChange={setNewItemCategory}>
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedChecklist?.categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="secondary">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button onClick={handleAddItem}>Add Item</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleClearChecked}>
                     <Trash2 className="w-4 h-4 mr-1" />
                     Clear Checked
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => toast({ title: "Coming Soon!", description: "Export feature is under development." })}>
                     <Download className="w-4 h-4 mr-1" />
                     Export
                   </Button>
                 </div>
                 
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSaveChanges}>
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
                 </Button>
@@ -282,6 +487,63 @@ const Checklist = () => {
           )}
         </DrawerContent>
       </Drawer>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your
+              checklist.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteChecklist}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingChecklist?.id ? 'Edit Checklist' : 'New Checklist'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={editingChecklist?.name || ''}
+                onChange={(e) => setEditingChecklist({ ...editingChecklist, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tags" className="text-right">
+                Tags
+              </Label>
+              <Input
+                id="tags"
+                value={editingChecklist?.tags?.join(', ') || ''}
+                onChange={(e) => setEditingChecklist({ ...editingChecklist, tags: e.target.value.split(',').map(t => t.trim()) })}
+                className="col-span-3"
+                placeholder="e.g. Summer, Europe, 2 weeks"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" onClick={() => setEditingChecklist(null)}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button onClick={handleSaveChecklist}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
