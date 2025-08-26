@@ -5,38 +5,21 @@ from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-# -----------Supabase 客户端初始化----------------
+# Create the singleton Supabase client instance directly.
+# This instance will be shared across the entire application.
+try:
+    supabase_client: Client = create_client(
+        supabase_url=settings.SUPABASE_URL,
+        supabase_key=settings.SUPABASE_KEY
+    )
+    logger.info("Supabase client initialized successfully.")
+except Exception as e:
+    logger.error(f"Fatal: Failed to initialize Supabase client: {str(e)}")
+    # Re-raise the exception to prevent the application from starting
+    # with a non-functional database connection.
+    raise e
+
+# A getter function for FastAPI's dependency injection.
+# This allows us to easily use the client in API routes.
 def get_supabase_client() -> Client:
-    try:
-        return create_client(
-            supabase_url=settings.SUPABASE_URL,
-            supabase_key=settings.SUPABASE_KEY
-        )
-    except Exception as e:
-        logger.error(f"Supabase连接失败: {str(e)}")
-        raise e
-
-# -------- 测试 --------
-def register_user(email, password):
-    try:
-        response = supabase.auth.sign_up({
-            'email': email,
-            'password': password
-        })
-        print("注册成功:", response)
-        return response
-    except Exception as e:
-        print(f"注册失败: {str(e)}")
-        return None
-    
-supabase = get_supabase_client()
-
-if __name__ == "__main__":
-    try:
-        query = supabase.table("todo_items").select("*")
-        response = query.execute()
-        print(response.data)
-    except Exception as e:
-        print(f"获取待办事项失败: {str(e)}")
-    
-    register_user("test@example.com", "qwer1234")
+    return supabase_client

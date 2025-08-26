@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ALLOW_ALL_USERS: bool = Field(False, env="ALLOW_ALL_USERS")
     TIANDITU_KEY: str = Field(..., env="TIANDITU_KEY")
     GAODE_KEY: str = Field(..., env="GAODE_KEY")
+    # 用来禁用认证
+    AUTH_DISABLED: bool = Field(False, env="AUTH_DISABLED")
     class Config:
         env_file = ".env"
         extra = "ignore"  # 忽略额外环境变量

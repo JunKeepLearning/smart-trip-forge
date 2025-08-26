@@ -31,26 +31,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/components/ui/use-toast';
 import { useChecklists } from '@/contexts/ChecklistsContext';
-import type { Checklist } from '@/contexts/ChecklistsContext';
+import type { Checklist as ChecklistType } from '@/contexts/ChecklistsContext';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { 
   Plus, 
   Bot, 
   Package, 
-  Trash2 
+  Trash2, 
+  User, 
+  Copy
 } from 'lucide-react';
 
-const Checklist = () => {
+const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, isTemplate?: boolean }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { checklists, addChecklist, deleteChecklist } = useChecklists();
-
-  const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
-  const [newChecklistName, setNewChecklistName] = useState("");
-  const [newChecklistTags, setNewChecklistTags] = useState("");
+  const { deleteChecklist } = useChecklists();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [checklistToDelete, setChecklistToDelete] = useState<string | null>(null);
 
-  const getChecklistProgress = (checklist: Checklist) => {
+  const getChecklistProgress = (checklist: ChecklistType) => {
     if (!checklist.categories) return { checked: 0, total: 0 };
     const totalItems = checklist.categories.reduce((sum, cat) => sum + cat.items.length, 0);
     const checkedItems = checklist.categories.reduce(
@@ -59,26 +58,99 @@ const Checklist = () => {
     return { checked: checkedItems, total: totalItems };
   };
 
+  const progress = getChecklistProgress(checklist);
+
+  const handleDeleteConfirm = () => {
+    deleteChecklist(checklist.id);
+    toast({ title: "Checklist deleted" });
+    setIsAlertOpen(false);
+  };
+
+  const handleCopyTemplate = () => {
+    // TODO: Implement copy functionality
+    toast({ title: "Coming Soon!", description: "You'll soon be able to copy templates to your checklists." });
+  }
+
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <Card 
+            className="bg-card hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col"
+            onClick={() => navigate(`/checklist/${checklist.id}`)}
+          >
+            <CardHeader>
+              <CardTitle className="text-lg group-hover:text-primary transition-colors">{checklist.name}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {progress.total > 0 ? `${progress.checked} of ${progress.total} packed` : "No items yet"}
+              </p>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col justify-end">
+              <div className="flex flex-wrap gap-1">
+                {checklist.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {isTemplate ? (
+            <ContextMenuItem onSelect={handleCopyTemplate}>
+              <Copy className="w-4 h-4 mr-2" />
+              Use Template
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem 
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              onSelect={() => setIsAlertOpen(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your checklist.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+const Checklist = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { checklists, addChecklist, isLoading } = useChecklists();
+
+  const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
+  const [newChecklistName, setNewChecklistName] = useState("");
+  const [newChecklistTags, setNewChecklistTags] = useState("");
+
+  const userChecklists = checklists.filter(c => !c.is_template);
+  const templateChecklists = checklists.filter(c => c.is_template);
+
   const handleNewChecklist = () => {
+    if (!user) {
+      toast({ title: "Login Required", description: "Please log in to create a new checklist." });
+      return;
+    }
     setNewChecklistName("");
     setNewChecklistTags("");
     setIsChecklistDialogOpen(true);
-  };
-
-  const openDeleteDialog = (checklistId: string) => {
-    setChecklistToDelete(checklistId);
-    setIsAlertOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (!checklistToDelete) return;
-    deleteChecklist(checklistToDelete);
-    toast({
-      title: "Checklist deleted",
-      description: "The checklist has been successfully deleted.",
-    });
-    setIsAlertOpen(false);
-    setChecklistToDelete(null);
   };
 
   const handleSaveChecklist = () => {
@@ -96,102 +168,73 @@ const Checklist = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              My Packing Checklists
+              Packing Checklists
             </h1>
             <p className="text-muted-foreground mt-1">
-              Organize your trip items with smart checklists
+              Organize your trip items with smart checklists and templates.
             </p>
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Checklist
-            </Button>
+            {user && (
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Checklist
+              </Button>
+            )}
             <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" onClick={() => toast({ title: "Coming Soon!", description: "AI Checklist feature is under development." })}>
               <Bot className="w-4 h-4 mr-2" />
               AI Checklist
             </Button>
-            <Button variant="outline" onClick={() => toast({ title: "Coming Soon!", description: "Template feature is under development." })}>
-              <Package className="w-4 h-4 mr-2" />
-              Templates
-            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checklists.map((checklist) => {
-            const progress = getChecklistProgress(checklist);
-            return (
-              <ContextMenu key={checklist.id}>
-                <ContextMenuTrigger>
-                  <Card 
-                    className="bg-card hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col"
-                    onClick={() => navigate(`/checklist/${checklist.id}`)}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{checklist.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {progress.total > 0 ? `${progress.checked} of ${progress.total} packed` : "No items yet"}
-                      </p>
-                    </CardHeader>
-                    <CardContent className="flex-grow flex flex-col justify-end">
-                      <div className="flex flex-wrap gap-1">
-                        {checklist.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem 
-                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                    onSelect={() => openDeleteDialog(checklist.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            );
-          })}
-        </div>
-
-        {checklists.length === 0 && (
-          <div className="text-center py-16">
-            <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              No checklists yet
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              You haven't created any trips yet, click above to start!
-            </p>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Checklist
-            </Button>
-          </div>
-        )}
+        <Tabs defaultValue="my-checklists" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="my-checklists">My Checklists</TabsTrigger>
+            <TabsTrigger value="templates">Template Center</TabsTrigger>
+          </TabsList>
+          <TabsContent value="my-checklists">
+            {user ? (
+              userChecklists.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                  {userChecklists.map((checklist) => (
+                    <ChecklistCard key={checklist.id} checklist={checklist} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No checklists yet</h3>
+                  <p className="text-muted-foreground mb-6">You haven't created any checklists yet. Get started now!</p>
+                  <Button onClick={handleNewChecklist}>Create Your First Checklist</Button>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-16">
+                <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">Login to see your checklists</h3>
+                <p className="text-muted-foreground">Or browse the templates to get started.</p>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="templates">
+            {templateChecklists.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                {templateChecklists.map((checklist) => (
+                  <ChecklistCard key={checklist.id} checklist={checklist} isTemplate />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No templates available</h3>
+                <p className="text-muted-foreground">Check back later for pre-made checklist templates.</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
-
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              checklist.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setChecklistToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <Dialog open={isChecklistDialogOpen} onOpenChange={setIsChecklistDialogOpen}>
         <DialogContent>
@@ -200,36 +243,16 @@ const Checklist = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={newChecklistName}
-                onChange={(e) => setNewChecklistName(e.target.value)}
-                className="col-span-3"
-                placeholder='e.g. "European Summer Trip"'
-              />
+              <Label htmlFor="name" className="text-right">Name</Label>
+              <Input id="name" value={newChecklistName} onChange={(e) => setNewChecklistName(e.target.value)} className="col-span-3" placeholder='e.g. "European Summer Trip"' />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="tags" className="text-right">
-                Tags
-              </Label>
-              <Input
-                id="tags"
-                value={newChecklistTags}
-                onChange={(e) => setNewChecklistTags(e.target.value)}
-                className="col-span-3"
-                placeholder="e.g. Summer, Europe, 2 weeks"
-              />
+              <Label htmlFor="tags" className="text-right">Tags</Label>
+              <Input id="tags" value={newChecklistTags} onChange={(e) => setNewChecklistTags(e.target.value)} className="col-span-3" placeholder="e.g. Summer, Europe, 2 weeks" />
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary">
-                Cancel
-              </Button>
-            </DialogClose>
+            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
             <Button onClick={handleSaveChecklist}>Save</Button>
           </DialogFooter>
         </DialogContent>

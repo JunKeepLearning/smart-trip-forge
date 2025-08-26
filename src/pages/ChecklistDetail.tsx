@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Settings, Share2, Package, Shirt, Star, Smartphone, Plus, Car, Utensils, Gift, Camera } from "lucide-react";
+import { ArrowLeft, Settings, Share2, Package, Shirt, Star, Smartphone, Plus, Car, Utensils, Gift, Camera, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import ChecklistSettings from "@/components/ChecklistSettings";
@@ -26,18 +26,14 @@ const ChecklistDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getChecklistById, updateChecklist, deleteChecklist, updateItem, deleteItem } = useChecklists();
-  const saveDraftTimeout = useRef<number | null>(null);
-  const longPressTimer = useRef<number | null>(null);
-
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [pristineChecklist, setPristineChecklist] = useState<Checklist | null>(null);
   const [localChecklist, setLocalChecklist] = useState<Checklist | null>(null);
   
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isAddCategoryOpen, setAddCategoryOpen] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [pendingPath, setPendingPath] = useState("");
-  const [draftToRestore, setDraftToRestore] = useState<Checklist | null>(null);
   const [newItemName, setNewItemName] = useState('');
   const newItemInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,24 +41,28 @@ const ChecklistDetail = () => {
   const [selectedItem, setSelectedItem] = useState<{ item: ChecklistItem; categoryId: string } | null>(null);
 
   useEffect(() => {
-    const checklistFromContext = getChecklistById(checklistId || '');
-    if (checklistFromContext) {
-      const draftKey = `unsaved_checklist_${checklistId}`;
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        setPristineChecklist(JSON.parse(JSON.stringify(checklistFromContext)));
-        setDraftToRestore(draft);
-      } else {
-        const deepCopy = JSON.parse(JSON.stringify(checklistFromContext));
-        setPristineChecklist(deepCopy);
-        setLocalChecklist(deepCopy);
-        setOpenCategories(deepCopy.categories.map(c => c.id));
-      }
-    } else {
-      setPristineChecklist(null);
-      setLocalChecklist(null);
+    if (!checklistId) {
+        setIsLoading(false);
+        return;
     }
+
+    const fetchDetails = async () => {
+        setIsLoading(true);
+        const checklistData = await getChecklistById(checklistId);
+        if (checklistData) {
+            const deepCopy = JSON.parse(JSON.stringify(checklistData));
+            setPristineChecklist(deepCopy);
+            setLocalChecklist(deepCopy);
+            setOpenCategories(deepCopy.categories.map(c => c.id));
+        } else {
+            // Handle case where checklist is not found
+            setPristineChecklist(null);
+            setLocalChecklist(null);
+        }
+        setIsLoading(false);
+    };
+
+    fetchDetails();
   }, [checklistId, getChecklistById]);
 
   const overallProgress = useMemo(() => {
@@ -81,44 +81,6 @@ const ChecklistDetail = () => {
     return JSON.stringify(pristineChecklist) !== JSON.stringify(localChecklist);
   }, [pristineChecklist, localChecklist]);
 
-  useEffect(() => {
-    if (saveDraftTimeout.current) clearTimeout(saveDraftTimeout.current);
-    if (isDirty && localChecklist) {
-      saveDraftTimeout.current = window.setTimeout(() => {
-        localStorage.setItem(`unsaved_checklist_${localChecklist.id}`, JSON.stringify(localChecklist));
-      }, 1000);
-    } else if (!isDirty && localChecklist) {
-      localStorage.removeItem(`unsaved_checklist_${localChecklist.id}`);
-    }
-    return () => { if (saveDraftTimeout.current) clearTimeout(saveDraftTimeout.current); };
-  }, [localChecklist, isDirty]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => { if (isDirty) { event.preventDefault(); event.returnValue = ''; } };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
-
-  const handleNavigate = (path: string) => isDirty ? (setPendingPath(path), setShowLeaveConfirm(true)) : navigate(path);
-  const handleLeaveConfirm = () => navigate(pendingPath);
-
-  const handleRestoreDraft = () => {
-    if (draftToRestore) {
-      setLocalChecklist(draftToRestore);
-      setOpenCategories(draftToRestore.categories.map(c => c.id));
-      setDraftToRestore(null);
-      toast({ title: "Draft Restored", description: "Your unsaved changes have been restored." });
-    }
-  };
-
-  const handleDiscardDraft = () => {
-    if (pristineChecklist) {
-      localStorage.removeItem(`unsaved_checklist_${pristineChecklist.id}`);
-      setLocalChecklist(JSON.parse(JSON.stringify(pristineChecklist)));
-      setOpenCategories(pristineChecklist.categories.map(c => c.id));
-      setDraftToRestore(null);
-    }
-  };
 
   const handleCheckItem = (categoryId: string, itemId: string, checked: boolean) => {
     setLocalChecklist(prev => {
@@ -152,8 +114,6 @@ const ChecklistDetail = () => {
     setOpenCategories(prev => [...prev, newCategory.id]);
   };
 
-  const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
-
   const handleOpenEditDialog = (item: ChecklistItem, categoryId: string) => {
     setSelectedItem({ item, categoryId });
     setEditDialogOpen(true);
@@ -161,51 +121,31 @@ const ChecklistDetail = () => {
 
   const handleSaveItem = (itemData: Partial<Omit<ChecklistItem, 'id'>>) => {
     if (!localChecklist || !selectedItem) return;
-    
     updateItem(localChecklist.id, selectedItem.categoryId, selectedItem.item.id, itemData);
-
-    const newLocalChecklist = {
-      ...localChecklist,
-      categories: localChecklist.categories.map(cat => 
+    const newLocalChecklist = { ...localChecklist, categories: localChecklist.categories.map(cat => 
         cat.id === selectedItem.categoryId 
           ? { ...cat, items: cat.items.map(item => item.id === selectedItem.item.id ? { ...item, ...itemData } : item) }
           : cat
       )
     };
-
     setLocalChecklist(newLocalChecklist);
     setPristineChecklist(JSON.parse(JSON.stringify(newLocalChecklist)));
-
     toast({ title: "Item Updated", description: `"${itemData.name}" has been updated.` });
   };
 
   const handleDeleteItem = () => {
     if (!localChecklist || !selectedItem) return;
     const originalName = selectedItem.item.name;
-
     deleteItem(localChecklist.id, selectedItem.categoryId, selectedItem.item.id);
-
-    const newLocalChecklist = {
-        ...localChecklist,
-        categories: localChecklist.categories.map(cat => 
-          cat.id === selectedItem.categoryId 
-            ? { ...cat, items: cat.items.filter(it => it.id !== selectedItem.item.id) }
-            : cat
-        )
+    const newLocalChecklist = { ...localChecklist, categories: localChecklist.categories.map(cat => 
+        cat.id === selectedItem.categoryId 
+          ? { ...cat, items: cat.items.filter(it => it.id !== selectedItem.item.id) }
+          : cat
+      )
     };
-
     setLocalChecklist(newLocalChecklist);
     setPristineChecklist(JSON.parse(JSON.stringify(newLocalChecklist)));
-
     toast({ title: "Item Deleted", description: `"${originalName}" has been deleted.`, variant: "destructive" });
-  };
-
-  const handleSaveChanges = () => {
-    if (!localChecklist) return;
-    updateChecklist(localChecklist.id, localChecklist);
-    setPristineChecklist(JSON.parse(JSON.stringify(localChecklist)));
-    localStorage.removeItem(`unsaved_checklist_${localChecklist.id}`);
-    toast({ title: "Success", description: "Your checklist has been saved to the cloud." });
   };
 
   const handleSaveSettings = (updatedData: Partial<Checklist>) => {
@@ -214,26 +154,25 @@ const ChecklistDetail = () => {
     setLocalChecklist(updatedChecklist);
     updateChecklist(localChecklist.id, updatedChecklist);
     setPristineChecklist(JSON.parse(JSON.stringify(updatedChecklist)));
-    toast({ title: "Settings Saved", description: "Checklist details have been updated." });
+    toast({ title: "Settings Saved" });
   };
 
   const handleDeleteChecklist = () => {
     if (!localChecklist) return;
-    localStorage.removeItem(`unsaved_checklist_${localChecklist.id}`);
     deleteChecklist(localChecklist.id);
     toast({ title: "Checklist Deleted" });
     navigate('/checklist');
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Link Copied!" });
-  };
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
 
-  const expandAll = () => localChecklist && setOpenCategories(localChecklist.categories.map(c => c.id));
-  const collapseAll = () => setOpenCategories([]);
-
-  if (!localChecklist && !draftToRestore) {
+  if (!localChecklist) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold">Checklist not found</h2>
@@ -244,26 +183,19 @@ const ChecklistDetail = () => {
 
   return (
     <>
-      <AlertDialog open={!!draftToRestore}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Unsaved Draft Found</AlertDialogTitle><AlertDialogDescription>We found a draft with unsaved changes. Would you like to restore it?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel onClick={handleDiscardDraft}>Discard</AlertDialogCancel><AlertDialogAction onClick={handleRestoreDraft}>Restore</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {localChecklist && (
         <div className="flex flex-col min-h-screen bg-background">
           <main className="flex-grow container mx-auto px-4 py-8">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <Button variant="ghost" size="sm" className="mb-4" onClick={() => handleNavigate('/checklist')}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
+                <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate('/checklist')}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
                 <h1 className="text-3xl font-bold text-foreground">{localChecklist.name}</h1>
                 <div className="flex items-center gap-2 mt-2">{localChecklist.tags.map(tag => <Badge key={tag}>{tag}</Badge>)}</div>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
-                <Button variant="outline" size="icon" onClick={handleShare}><Share2 className="h-4 w-4"/></Button>
+                <Button variant="outline" size="icon" onClick={() => {}}><Share2 className="h-4 w-4"/></Button>
                 <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4"/></Button>
-                <Button onClick={handleSaveChanges} disabled={!isDirty}>Save</Button>
+                <Button onClick={() => {}} disabled={!isDirty}>Save</Button>
               </div>
             </div>
 
@@ -276,8 +208,8 @@ const ChecklistDetail = () => {
             </div>
 
             <div className="flex items-center justify-end gap-2 my-4">
-                <Button variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
-                <Button variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
+                <Button variant="outline" size="sm" onClick={() => {}}>Expand All</Button>
+                <Button variant="outline" size="sm" onClick={() => {}}>Collapse All</Button>
             </div>
             <Separator className="mb-4"/>
 
@@ -310,12 +242,6 @@ const ChecklistDetail = () => {
                             <div 
                                 className="flex-1"
                                 onDoubleClick={() => handleOpenEditDialog(item, category.id)}
-                                onTouchStart={() => {
-                                    handleTouchEnd();
-                                    longPressTimer.current = window.setTimeout(() => handleOpenEditDialog(item, category.id), 500);
-                                }}
-                                onTouchEnd={handleTouchEnd}
-                                onContextMenu={(e) => e.preventDefault()}
                             >
                                 <label 
                                     htmlFor={`${category.id}-${item.id}`}
@@ -358,13 +284,6 @@ const ChecklistDetail = () => {
           </main>
         </div>
       )}
-
-      <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Unsaved Changes</AlertDialogTitle><AlertDialogDescription>You have unsaved changes. Are you sure you want to leave?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Stay</AlertDialogCancel><AlertDialogAction onClick={handleLeaveConfirm}>Leave</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <ChecklistSettings checklist={localChecklist} open={isSettingsOpen} onOpenChange={setSettingsOpen} onSave={handleSaveSettings} onDelete={handleDeleteChecklist} />
       {localChecklist && <AddCategoryDialog open={isAddCategoryOpen} onOpenChange={setAddCategoryOpen} onAddCategory={handleAddCategory} existingCategories={localChecklist.categories.map(c => c.name)} />}

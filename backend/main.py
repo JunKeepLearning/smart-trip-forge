@@ -30,8 +30,8 @@ app.add_middleware(
 # ---------------- 路由注册 ----------------
 
 app.include_router(data_router, prefix="/data", tags=["data"])
-
 app.include_router(favorites_router, prefix="/api", tags=["Favorites"])
+app.include_router(checklist_router, prefix="/checklists", tags=["Checklists"])
 
 # 根路由
 @app.get("/", summary="Root Endpoint", description="A simple root endpoint to check if the API is running.")

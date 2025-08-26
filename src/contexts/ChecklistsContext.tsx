@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { useAuth } from './AuthContext'; // Import the useAuth hook
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 // Data structures for Checklists
 export interface ChecklistItem {
@@ -16,191 +20,94 @@ export interface ChecklistCategory {
   items: ChecklistItem[];
 }
 
-// export interface Collaborator {
-//   id: string;
-//   name: string;
-//   avatarUrl: string;
-//   permission: 'readonly' | 'write';
-// }
-
 export interface Checklist {
   id: string;
   name: string;
   tags: string[];
+  is_template?: boolean; // To identify public templates
+  user_id?: string; // To identify owner
   categories: ChecklistCategory[];
-  // permission: 'private' | 'link';
-  // collaborators: Collaborator[];
 }
-
-// Mock Data
-const mockChecklists: Checklist[] = [
-    {
-      id: '1',
-      name: 'European Summer Trip',
-      tags: ['Summer', 'Europe', '2 weeks'],
-      // permission: 'link',
-      // collaborators: [
-      //   { id: 'collab1', name: 'Alice', avatarUrl: 'https://i.pravatar.cc/150?u=alice', permission: 'write' },
-      //   { id: 'collab2', name: 'Bob', avatarUrl: 'https://i.pravatar.cc/150?u=bob', permission: 'readonly' },
-      // ],
-      categories: [
-        {
-          id: 'clothing',
-          name: 'Clothing',
-          icon: 'Shirt',
-          items: [
-            { id: '1', name: 'Underwear', checked: true, quantity: 7, notes: 'Lightweight material' },
-            { id: '2', name: 'T-shirts', checked: true, quantity: 5 },
-            { id: '3', name: 'Jeans', checked: false, quantity: 2, notes: 'One black, one blue' },
-            { id: '4', name: 'Summer jacket', checked: false, quantity: 1 },
-            { id: '5', name: 'Swimwear', checked: true, quantity: 2 },
-          ]
-        },
-        {
-          id: 'toiletries',
-          name: 'Toiletries & Health',
-          icon: 'Star',
-          items: [
-            { id: '6', name: 'Toothbrush', checked: true, quantity: 1 },
-            { id: '7', name: 'Toothpaste', checked: true, quantity: 1 },
-            { id: '8', name: 'Shampoo', checked: false, quantity: 1, notes: 'Travel size' },
-            { id: '9', name: 'Sunscreen', checked: true, quantity: 1 },
-            { id: '10', name: 'First aid kit', checked: false, quantity: 1 },
-          ]
-        },
-        {
-          id: 'electronics',
-          name: 'Electronics',
-          icon: 'Smartphone',
-          items: [
-            { id: '11', name: 'Phone charger', checked: true, quantity: 1 },
-            { id: '12', name: 'Camera', checked: false, quantity: 1, notes: 'Bring extra SD card' },
-            { id: '13', name: 'Power bank', checked: false, quantity: 1 },
-            { id: '14', name: 'Universal adapter', checked: true, quantity: 1 },
-          ]
-        }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Business Trip NYC',
-      tags: ['Business', 'Short', '3 days'],
-      // permission: 'private',
-      // collaborators: [],
-      categories: [
-        {
-          id: 'clothing',
-          name: 'Clothing',
-          icon: 'Shirt',
-          items: [
-            { id: '15', name: 'Business suits', checked: false, quantity: 2 },
-            { id: '16', name: 'Dress shirts', checked: true, quantity: 3 },
-            { id: '17', name: 'Ties', checked: false, quantity: 2 },
-          ]
-        }
-      ]
-    }
-  ];
 
 // Define the shape of the context
 interface ChecklistsContextType {
   checklists: Checklist[];
-  getChecklistById: (id: string) => Checklist | undefined;
-  addChecklist: (checklistData: Pick<Checklist, 'name' | 'tags'>) => Checklist;
-  updateChecklist: (id: string, checklistData: Partial<Omit<Checklist, 'id'>>) => void;
-  deleteChecklist: (id: string) => void;
-  updateItem: (listId: string, categoryId: string, itemId: string, itemData: Partial<Omit<ChecklistItem, 'id'>>) => void;
-  deleteItem: (listId: string, categoryId: string, itemId: string) => void;
+  isLoading: boolean;
+  getChecklistById: (id: string) => Promise<Checklist | undefined>;
+  // ... other functions will be updated later
 }
 
 // Create the context
 const ChecklistsContext = createContext<ChecklistsContextType | undefined>(undefined);
 
+// Create a helper for authenticated fetch
+const authedFetch = async (url: string, token: string | null, options: RequestInit = {}) => {
+  const headers = { ...options.headers, 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (!response.ok) {
+    const error = new Error(`An error occurred while fetching: ${response.statusText}`);
+    // You can add more error details if needed, e.g., from response body
+    throw error;
+  }
+
+  if (response.status === 204) { // No Content
+    return null;
+  }
+
+  return response.json();
+};
+
+
 // Create the provider component
 export const ChecklistsProvider = ({ children }: { children: ReactNode }) => {
-  const [checklists, setChecklists] = useState<Checklist[]>(mockChecklists);
+  const { session } = useAuth(); // Use the session from AuthContext
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getChecklistById = (id: string) => {
-    return checklists.find(checklist => checklist.id === id);
-  };
+  const fetchChecklists = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // The backend will return public templates if token is null,
+      // or user-specific checklists if token is provided.
+      const data = await authedFetch(`${API_BASE_URL}/checklists/`, session?.access_token || null);
+      setChecklists(data || []);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Could not load checklists.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session]); // Re-run when session changes (login/logout)
 
-  const addChecklist = (checklistData: Pick<Checklist, 'name' | 'tags'>) => {
-    const newChecklist: Checklist = {
-      ...checklistData,
-      id: crypto.randomUUID(),
-      // permission: 'private',
-      // collaborators: [],
-      categories: [
-          { id: 'clothing', name: 'Clothing', icon: 'Shirt', items: [] },
-          { id: 'toiletries', name: 'Toiletries & Health', icon: 'Star', items: [] },
-          { id: 'electronics', name: 'Electronics', icon: 'Smartphone', items: [] },
-      ],
-    };
-    setChecklists(prev => [newChecklist, ...prev]);
-    return newChecklist;
-  };
+  useEffect(() => {
+    fetchChecklists();
+  }, [fetchChecklists]);
 
-  const updateChecklist = (id: string, checklistData: Partial<Omit<Checklist, 'id'>>) => {
-    setChecklists(prev => 
-      prev.map(checklist => 
-        checklist.id === id ? { ...checklist, ...checklistData } : checklist
-      )
-    );
-  };
-
-  const deleteChecklist = (id: string) => {
-    setChecklists(prev => prev.filter(checklist => checklist.id !== id));
-  };
-
-  const updateItem = (listId: string, categoryId: string, itemId: string, itemData: Partial<Omit<ChecklistItem, 'id'>>) => {
-    setChecklists(prev => prev.map(list => {
-      if (list.id === listId) {
-        return {
-          ...list,
-          categories: list.categories.map(cat => {
-            if (cat.id === categoryId) {
-              return {
-                ...cat,
-                items: cat.items.map(item => item.id === itemId ? { ...item, ...itemData } : item)
-              };
-            }
-            return cat;
-          })
-        };
-      }
-      return list;
-    }));
-  };
-
-  const deleteItem = (listId: string, categoryId: string, itemId: string) => {
-    setChecklists(prev => prev.map(list => {
-      if (list.id === listId) {
-        return {
-          ...list,
-          categories: list.categories.map(cat => {
-            if (cat.id === categoryId) {
-              return {
-                ...cat,
-                items: cat.items.filter(item => item.id !== itemId)
-              };
-            }
-            return cat;
-          })
-        };
-      }
-      return list;
-    }));
+  const getChecklistById = async (id: string) => {
+    setIsLoading(true);
+    try {
+      return await authedFetch(`${API_BASE_URL}/checklists/${id}`, session?.access_token || null);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Could not load checklist details.", variant: "destructive" });
+      return undefined;
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const value = {
     checklists,
+    isLoading,
     getChecklistById,
-    addChecklist,
     updateChecklist,
-    deleteChecklist,
-    updateItem,
-    deleteItem,
-  };
+    // Other functions (add, update, delete) will be implemented next
+  } as ChecklistsContextType;
 
   return (
     <ChecklistsContext.Provider value={value}>
