@@ -6,26 +6,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, User, Shield } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
+// import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+// import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
 
 const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) => {
   if (!checklist) return null;
 
   const [name, setName] = useState(checklist.name);
   const [tags, setTags] = useState(checklist.tags.join(', '));
-  const [permission, setPermission] = useState(checklist.permission || 'private');
+  // const [permission, setPermission] = useState(checklist.permission || 'private');
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
-  const [isPrivacyAlertOpen, setPrivacyAlertOpen] = useState(false);
-  const [isAddCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
+  // const [isPrivacyAlertOpen, setPrivacyAlertOpen] = useState(false);
+  // const [isAddCollaboratorOpen, setAddCollaboratorOpen] = useState(false);
 
   useEffect(() => {
     if (checklist) {
       setName(checklist.name);
       setTags(checklist.tags.join(', '));
-      setPermission(checklist.permission || 'private');
+      // setPermission(checklist.permission || 'private');
     }
   }, [checklist]);
 
@@ -33,8 +33,8 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
     onSave({
       name,
       tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      permission,
-      collaborators: permission === 'private' ? [] : checklist.collaborators,
+      // permission,
+      // collaborators: permission === 'private' ? [] : checklist.collaborators,
     });
     onOpenChange(false);
   };
@@ -44,18 +44,18 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
     onDelete();
   };
 
-  const handlePermissionChange = (newPermission: string) => {
-    if (newPermission === 'private' && permission === 'link') {
-      setPrivacyAlertOpen(true);
-    } else {
-      setPermission(newPermission);
-    }
-  };
+  // const handlePermissionChange = (newPermission: string) => {
+  //   if (newPermission === 'private' && permission === 'link') {
+  //     setPrivacyAlertOpen(true);
+  //   } else {
+  //     setPermission(newPermission);
+  //   }
+  // };
 
-  const handlePrivacyConfirm = () => {
-    setPermission('private');
-    setPrivacyAlertOpen(false);
-  };
+  // const handlePrivacyConfirm = () => {
+  //   setPermission('private');
+  //   setPrivacyAlertOpen(false);
+  // };
 
   return (
     <>
@@ -85,6 +85,7 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
               </div>
 
               {/* Access Permissions */}
+              {/*
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Permissions</h3>
                 <RadioGroup value={permission} onValueChange={handlePermissionChange}>
@@ -98,8 +99,10 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
                   </div>
                 </RadioGroup>
               </div>
+              */}
 
               {/* Collaborators */}
+              {/*
               {permission !== 'private' && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Collaborators</h3>
@@ -128,6 +131,7 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
                   <Button variant="outline" onClick={() => setAddCollaboratorOpen(true)}><User className="w-4 h-4 mr-2" /> Invite Collaborator</Button>
                 </div>
               )}
+              */}
 
               {/* Delete Button */}
               <div className="space-y-4 border-t pt-4">
@@ -171,6 +175,7 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
       </AlertDialog>
 
       {/* Privacy Confirmation */}
+      {/*
       <AlertDialog open={isPrivacyAlertOpen} onOpenChange={setPrivacyAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -185,11 +190,14 @@ const ChecklistSettings = ({ checklist, open, onOpenChange, onSave, onDelete }) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      */}
 
+      {/*
       <AddCollaboratorDialog 
         open={isAddCollaboratorOpen}
         onOpenChange={setAddCollaboratorOpen}
       />
+      */}
     </>
   );
 };
