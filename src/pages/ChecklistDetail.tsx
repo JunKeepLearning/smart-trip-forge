@@ -40,6 +40,8 @@ const ChecklistDetail = () => {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ item: ChecklistItem; categoryId: string } | null>(null);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     if (!checklistId) {
         setIsLoading(false);
@@ -148,20 +150,44 @@ const ChecklistDetail = () => {
     toast({ title: "Item Deleted", description: `"${originalName}" has been deleted.`, variant: "destructive" });
   };
 
-  const handleSaveSettings = (updatedData: Partial<Checklist>) => {
+  const handleSave = async () => {
     if (!localChecklist) return;
-    const updatedChecklist = { ...localChecklist, ...updatedData };
-    setLocalChecklist(updatedChecklist);
-    updateChecklist(localChecklist.id, updatedChecklist);
-    setPristineChecklist(JSON.parse(JSON.stringify(updatedChecklist)));
-    toast({ title: "Settings Saved" });
+    
+    setIsSaving(true);
+    const success = await updateChecklist(localChecklist);
+    setIsSaving(false);
+
+    if (success) {
+      const deepCopy = JSON.parse(JSON.stringify(localChecklist));
+      setPristineChecklist(deepCopy);
+      toast({ title: "Checklist Saved", description: "Your changes have been saved successfully." });
+    }
   };
 
-  const handleDeleteChecklist = () => {
+  const handleSaveSettings = async (updatedData: Partial<Checklist>) => {
     if (!localChecklist) return;
-    deleteChecklist(localChecklist.id);
-    toast({ title: "Checklist Deleted" });
-    navigate('/checklist');
+    const updatedChecklist = { ...localChecklist, ...updatedData };
+    
+    setIsSaving(true);
+    const success = await updateChecklist(updatedChecklist);
+    setIsSaving(false);
+
+    if (success) {
+      const deepCopy = JSON.parse(JSON.stringify(updatedChecklist));
+      setLocalChecklist(deepCopy);
+      setPristineChecklist(deepCopy);
+      toast({ title: "Settings Saved" });
+    }
+  };
+
+  const handleDeleteChecklist = async () => {
+    if (!localChecklist) return;
+    const success = await deleteChecklist(localChecklist.id);
+    if (success) {
+      toast({ title: "Checklist Deleted" });
+      navigate('/checklist');
+    }
+    // If it fails, the context will show a toast
   };
 
   if (isLoading) {
@@ -195,7 +221,9 @@ const ChecklistDetail = () => {
               <div className="flex items-center space-x-2 flex-shrink-0">
                 <Button variant="outline" size="icon" onClick={() => {}}><Share2 className="h-4 w-4"/></Button>
                 <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4"/></Button>
-                <Button onClick={() => {}} disabled={!isDirty}>Save</Button>
+                <Button onClick={handleSave} disabled={!isDirty || isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                </Button>
               </div>
             </div>
 

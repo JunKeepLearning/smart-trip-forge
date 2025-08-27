@@ -60,9 +60,12 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
 
   const progress = getChecklistProgress(checklist);
 
-  const handleDeleteConfirm = () => {
-    deleteChecklist(checklist.id);
-    toast({ title: "Checklist deleted" });
+  const handleDeleteConfirm = async () => {
+    const success = await deleteChecklist(checklist.id);
+    if (success) {
+      toast({ title: "Checklist deleted" });
+    }
+    // If it fails, the context will show a toast
     setIsAlertOpen(false);
   };
 
@@ -132,6 +135,7 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
 }
 
 const Checklist = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { checklists, addChecklist, isLoading } = useChecklists();
@@ -139,6 +143,7 @@ const Checklist = () => {
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [newChecklistName, setNewChecklistName] = useState("");
   const [newChecklistTags, setNewChecklistTags] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const userChecklists = checklists.filter(c => !c.is_template);
   const templateChecklists = checklists.filter(c => c.is_template);
@@ -153,13 +158,20 @@ const Checklist = () => {
     setIsChecklistDialogOpen(true);
   };
 
-  const handleSaveChecklist = () => {
-    addChecklist({
+  const handleSaveChecklist = async () => {
+    setIsCreating(true);
+    const newChecklist = await addChecklist({
       name: newChecklistName || "Untitled Checklist",
       tags: newChecklistTags.split(',').map(t => t.trim()).filter(Boolean),
     });
-    toast({ title: "Checklist created" });
-    setIsChecklistDialogOpen(false);
+
+    if (newChecklist) {
+      toast({ title: "Checklist created" });
+      setIsChecklistDialogOpen(false);
+      navigate(`/checklist/${newChecklist.id}`);
+    }
+    // If it fails, the context will show a toast
+    setIsCreating(false);
   };
 
   return (
@@ -252,8 +264,10 @@ const Checklist = () => {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-            <Button onClick={handleSaveChecklist}>Save</Button>
+            <DialogClose asChild><Button type="button" variant="secondary" disabled={isCreating}>Cancel</Button></DialogClose>
+            <Button onClick={handleSaveChecklist} disabled={isCreating}>
+              {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

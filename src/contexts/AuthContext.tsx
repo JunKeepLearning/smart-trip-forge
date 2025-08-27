@@ -99,7 +99,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sign out
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // First, check if there is actually a session to sign out from.
+    if (!session) {
+      console.warn("No active session to sign out from.");
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // Log the error for debugging
+        console.error("Error signing out:", error.message);
+        // Optionally, you could add a toast notification here for the user
+      }
+      // The onAuthStateChange listener will automatically clear the user and session state.
+      // It's best practice to handle navigation (e.g., redirecting to home) in the UI component
+      // that calls this signOut function.
+    } catch (err) {
+      console.error("An unexpected error occurred during sign out:", err);
+    }
   };
 
   // Reset password

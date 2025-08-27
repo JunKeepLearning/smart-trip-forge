@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from supabase import Client
 from app.core.client import get_supabase_client
 import json
 
 router = APIRouter()
-supabase = get_supabase_client()
 
 # Hardcoded data for demonstration purposes
 with open('data/destinations.json', 'r', encoding='utf-8') as f:
@@ -25,7 +25,7 @@ def search_destinations(q: str = Query(None, min_length=1)):
     return results[:10] # Return top 10 matches
 
 @router.get("/museums")
-def get_museums():
+def get_museums(supabase: Client = Depends(get_supabase_client)):
     try:
         response = supabase.table("museums").select("*").limit(10).execute()
         return response

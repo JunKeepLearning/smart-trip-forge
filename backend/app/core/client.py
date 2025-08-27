@@ -2,24 +2,32 @@
 from supabase import create_client, Client
 from app.core.config import settings
 from app.utils.logger import setup_logger
+from typing import Optional
 
 logger = setup_logger(__name__)
 
-# Create the singleton Supabase client instance directly.
-# This instance will be shared across the entire application.
-try:
-    supabase_client: Client = create_client(
-        supabase_url=settings.SUPABASE_URL,
-        supabase_key=settings.SUPABASE_KEY
-    )
-    logger.info("Supabase client initialized successfully.")
-except Exception as e:
-    logger.error(f"Fatal: Failed to initialize Supabase client: {str(e)}")
-    # Re-raise the exception to prevent the application from starting
-    # with a non-functional database connection.
-    raise e
+supabase_client: Optional[Client] = None
 
-# A getter function for FastAPI's dependency injection.
-# This allows us to easily use the client in API routes.
 def get_supabase_client() -> Client:
+    """
+    Returns the Supabase client.
+    Raises an exception if the client is not initialized.
+    """
+    if supabase_client is None:
+        raise RuntimeError("Supabase client has not been initialized.")
     return supabase_client
+
+def init_supabase_client():
+    """
+    Initializes the Supabase client.
+    """
+    global supabase_client
+    try:
+        supabase_client = create_client(
+            supabase_url=settings.SUPABASE_URL,
+            supabase_key=settings.SUPABASE_KEY
+        )
+        logger.info("Supabase client initialized successfully.")
+    except Exception as e:
+        logger.error(f"Fatal: Failed to initialize Supabase client: {str(e)}")
+        raise e

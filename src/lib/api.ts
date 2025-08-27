@@ -1,3 +1,5 @@
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export interface Destination {
   id: string; // Changed to string to be more generic
   name: string;
@@ -49,7 +51,7 @@ export const searchDestinations = async (query: string): Promise<SearchableDesti
   }
   try {
     // We need to specify the full URL to the backend running on a different port
-    const response = await fetch(`http://127.0.0.1:8000/api/data/search/destinations?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`${API_BASE_URL}/api/data/search/destinations?q=${encodeURIComponent(query)}`);
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }

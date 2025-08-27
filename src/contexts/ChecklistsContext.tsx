@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './AuthContext'; // Import the useAuth hook
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+import { API_BASE_URL } from '@/lib/api';
 
 // Data structures for Checklists
 export interface ChecklistItem {
@@ -34,7 +33,9 @@ interface ChecklistsContextType {
   checklists: Checklist[];
   isLoading: boolean;
   getChecklistById: (id: string) => Promise<Checklist | undefined>;
-  // ... other functions will be updated later
+  updateChecklist: (updatedChecklist: Checklist) => Promise<boolean>;
+  addChecklist: (newChecklist: { name: string; tags: string[] }) => Promise<Checklist | null>;
+  deleteChecklist: (id: string) => Promise<boolean>;
 }
 
 // Create the context
@@ -101,12 +102,87 @@ export const ChecklistsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateChecklist = async (updatedChecklist: Checklist): Promise<boolean> => {
+    if (!session) {
+      toast({ title: "Authentication Error", description: "You must be logged in to save changes.", variant: "destructive" });
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      await authedFetch(`${API_BASE_URL}/checklists/${updatedChecklist.id}`, session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify(updatedChecklist),
+      });
+
+      // Update local state optimistically or refetch
+      setChecklists(prev => prev.map(c => c.id === updatedChecklist.id ? updatedChecklist : c));
+      return true;
+    } catch (error) {
+      console.error("Failed to update checklist:", error);
+      toast({ title: "Save Failed", description: "Your changes could not be saved to the server.", variant: "destructive" });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addChecklist = async (newChecklist: { name: string; tags: string[] }): Promise<Checklist | null> => {
+    if (!session) {
+      toast({ title: "Authentication Error", description: "You must be logged in to create a checklist.", variant: "destructive" });
+      return null;
+    }
+
+    setIsLoading(true);
+    try {
+      const createdChecklist = await authedFetch(`${API_BASE_URL}/checklists/`, session.access_token, {
+        method: 'POST',
+        body: JSON.stringify(newChecklist),
+      });
+      
+      // Add the new checklist to the top of the list
+      setChecklists(prev => [createdChecklist, ...prev]);
+      return createdChecklist;
+    } catch (error) {
+      console.error("Failed to create checklist:", error);
+      toast({ title: "Creation Failed", description: "The new checklist could not be created.", variant: "destructive" });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteChecklist = async (id: string): Promise<boolean> => {
+    if (!session) {
+      toast({ title: "Authentication Error", description: "You must be logged in to delete a checklist.", variant: "destructive" });
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      await authedFetch(`${API_BASE_URL}/checklists/${id}`, session.access_token, {
+        method: 'DELETE',
+      });
+
+      // Remove the checklist from the list
+      setChecklists(prev => prev.filter(c => c.id !== id));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete checklist:", error);
+      toast({ title: "Deletion Failed", description: "The checklist could not be deleted.", variant: "destructive" });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     checklists,
     isLoading,
     getChecklistById,
     updateChecklist,
-    // Other functions (add, update, delete) will be implemented next
+    addChecklist,
+    deleteChecklist,
   } as ChecklistsContextType;
 
   return (

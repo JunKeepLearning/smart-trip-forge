@@ -2,7 +2,7 @@
 // 导入 React 库，用于组件开发
 import React from 'react';
 // 导入 Link 组件，用于在应用内进行路由导航
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 // 导入自定义的 Button 组件
 import { Button } from '@/components/ui/button';
 // 从 lucide-react 库导入图标，用于界面元素
@@ -27,6 +27,12 @@ import { navLinks } from './layout';
 const TheHeader = () => {
   // 从认证上下文中获取当前用户和登出函数
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   // 返回头部组件的 JSX
   return (
@@ -97,7 +103,7 @@ const TheHeader = () => {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={signOut}>
+                  <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
