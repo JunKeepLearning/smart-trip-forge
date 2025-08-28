@@ -32,16 +32,36 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/components/ui/use-toast';
 import { useChecklists } from '@/contexts/ChecklistsContext';
 import type { Checklist as ChecklistType } from '@/contexts/ChecklistsContext';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
+import { useAuth } from '@/contexts/AuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { 
   Plus, 
   Bot, 
   Package, 
   Trash2, 
   User, 
-  Copy
+  Copy,
+  Loader2
 } from 'lucide-react';
+
+// Skeleton component for loading state
+const ChecklistCardSkeleton = () => {
+  return (
+    <Card className="h-full flex flex-col">
+      <CardHeader>
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-1/2 mt-2" />
+      </CardHeader>
+      <CardContent className="flex-grow flex flex-col justify-end">
+        <div className="flex flex-wrap gap-1">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, isTemplate?: boolean }) => {
   const navigate = useNavigate();
@@ -49,28 +69,19 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
   const { deleteChecklist } = useChecklists();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
 
-  const getChecklistProgress = (checklist: ChecklistType) => {
-    if (!checklist.categories) return { checked: 0, total: 0 };
-    const totalItems = checklist.categories.reduce((sum, cat) => sum + cat.items.length, 0);
-    const checkedItems = checklist.categories.reduce(
-      (sum, cat) => sum + cat.items.filter(item => item.checked).length, 0
-    );
-    return { checked: checkedItems, total: totalItems };
-  };
-
-  const progress = getChecklistProgress(checklist);
+  // Progress is now directly from the checklist object's pre-calculated fields
+  const total = checklist.items_count || 0;
+  const checked = checklist.items_checked_count || 0;
 
   const handleDeleteConfirm = async () => {
     const success = await deleteChecklist(checklist.id);
     if (success) {
       toast({ title: "Checklist deleted" });
     }
-    // If it fails, the context will show a toast
     setIsAlertOpen(false);
   };
 
   const handleCopyTemplate = () => {
-    // TODO: Implement copy functionality
     toast({ title: "Coming Soon!", description: "You'll soon be able to copy templates to your checklists." });
   }
 
@@ -85,7 +96,7 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
             <CardHeader>
               <CardTitle className="text-lg group-hover:text-primary transition-colors">{checklist.name}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {progress.total > 0 ? `${progress.checked} of ${progress.total} packed` : "No items yet"}
+                {total > 0 ? `${checked} of ${total} packed` : "No items yet"}
               </p>
             </CardHeader>
             <CardContent className="flex-grow flex flex-col justify-end">
@@ -170,9 +181,16 @@ const Checklist = () => {
       setIsChecklistDialogOpen(false);
       navigate(`/checklist/${newChecklist.id}`);
     }
-    // If it fails, the context will show a toast
     setIsCreating(false);
   };
+
+  const renderSkeletons = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <ChecklistCardSkeleton key={index} />
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -207,42 +225,46 @@ const Checklist = () => {
             <TabsTrigger value="templates">Template Center</TabsTrigger>
           </TabsList>
           <TabsContent value="my-checklists">
-            {user ? (
-              userChecklists.length > 0 ? (
+            {isLoading ? renderSkeletons() : (
+              user ? (
+                userChecklists.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                    {userChecklists.map((checklist) => (
+                      <ChecklistCard key={checklist.id} checklist={checklist} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">No checklists yet</h3>
+                    <p className="text-muted-foreground mb-6">You haven't created any checklists yet. Get started now!</p>
+                    <Button onClick={handleNewChecklist}>Create Your First Checklist</Button>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-16">
+                  <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">Login to see your checklists</h3>
+                  <p className="text-muted-foreground">Or browse the templates to get started.</p>
+                </div>
+              )
+            )}
+          </TabsContent>
+          <TabsContent value="templates">
+            {isLoading ? renderSkeletons() : (
+              templateChecklists.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                  {userChecklists.map((checklist) => (
-                    <ChecklistCard key={checklist.id} checklist={checklist} />
+                  {templateChecklists.map((checklist) => (
+                    <ChecklistCard key={checklist.id} checklist={checklist} isTemplate />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-16">
-                  <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No checklists yet</h3>
-                  <p className="text-muted-foreground mb-6">You haven't created any checklists yet. Get started now!</p>
-                  <Button onClick={handleNewChecklist}>Create Your First Checklist</Button>
+                  <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No templates available</h3>
+                  <p className="text-muted-foreground">Check back later for pre-made checklist templates.</p>
                 </div>
               )
-            ) : (
-              <div className="text-center py-16">
-                <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Login to see your checklists</h3>
-                <p className="text-muted-foreground">Or browse the templates to get started.</p>
-              </div>
-            )}
-          </TabsContent>
-          <TabsContent value="templates">
-            {templateChecklists.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                {templateChecklists.map((checklist) => (
-                  <ChecklistCard key={checklist.id} checklist={checklist} isTemplate />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No templates available</h3>
-                <p className="text-muted-foreground">Check back later for pre-made checklist templates.</p>
-              </div>
             )}
           </TabsContent>
         </Tabs>

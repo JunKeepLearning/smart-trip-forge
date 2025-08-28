@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from app.api.data_api import router as data_router
 from app.api.checklist_api import router as checklist_router
 from app.api.favorites_api import router as favorites_router
-from app.core.client import init_supabase_client
+from app.core.client import init_supabase_for_startup
 import time
 from app.utils.logger import setup_logger
 
@@ -17,7 +17,7 @@ logger = setup_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 在应用启动时初始化 Supabase 客户端
-    init_supabase_client()
+    init_supabase_for_startup()
     logger.info("Application startup complete.")
     yield
     # 在应用关闭时可以添加清理代码 (如果需要)

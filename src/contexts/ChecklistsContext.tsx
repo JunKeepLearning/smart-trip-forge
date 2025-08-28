@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from './AuthContext'; // Import the useAuth hook
+import { useAuth } from './AuthContext';
 import { API_BASE_URL } from '@/lib/api';
 
-// Data structures for Checklists
+// --- Data Structures ---
 export interface ChecklistItem {
   id: string;
   name: string;
   checked: boolean;
   quantity: number;
   notes?: string;
+  category_id: string;
 }
 
 export interface ChecklistCategory {
@@ -23,25 +24,40 @@ export interface Checklist {
   id: string;
   name: string;
   tags: string[];
-  is_template?: boolean; // To identify public templates
-  user_id?: string; // To identify owner
+  is_template?: boolean;
+  user_id?: string;
   categories: ChecklistCategory[];
+  items_count?: number;
+  items_checked_count?: number;
 }
 
-// Define the shape of the context
+// --- New API-aligned types for requests ---
+type ChecklistUpdateData = Partial<{ name: string; tags: string[] }>;
+type CategoryCreateData = { name: string; icon?: string };
+type CategoryUpdateData = Partial<CategoryCreateData>;
+type ItemCreateData = { name: string; quantity?: number };
+type ItemUpdateData = Partial<Omit<ChecklistItem, 'id' | 'category_id'>>;
+
+// --- Context Shape ---
 interface ChecklistsContextType {
   checklists: Checklist[];
   isLoading: boolean;
+  fetchChecklists: () => Promise<void>;
   getChecklistById: (id: string) => Promise<Checklist | undefined>;
-  updateChecklist: (updatedChecklist: Checklist) => Promise<boolean>;
-  addChecklist: (newChecklist: { name: string; tags: string[] }) => Promise<Checklist | null>;
+  addChecklist: (data: { name: string; tags: string[] }) => Promise<Checklist | null>;
+  updateChecklist: (id: string, data: ChecklistUpdateData) => Promise<void>;
   deleteChecklist: (id: string) => Promise<boolean>;
+  addCategory: (checklistId: string, data: CategoryCreateData) => Promise<void>;
+  updateCategory: (categoryId: string, data: CategoryUpdateData) => Promise<void>;
+  deleteCategory: (checklistId: string, categoryId: string) => Promise<void>;
+  addItem: (categoryId: string, data: ItemCreateData) => Promise<void>;
+  updateItem: (itemId: string, data: ItemUpdateData) => Promise<void>;
+  deleteItem: (categoryId: string, itemId: string) => Promise<void>;
 }
 
-// Create the context
 const ChecklistsContext = createContext<ChecklistsContextType | undefined>(undefined);
 
-// Create a helper for authenticated fetch
+// --- Helper for authenticated fetch ---
 const authedFetch = async (url: string, token: string | null, options: RequestInit = {}) => {
   const headers = { ...options.headers, 'Content-Type': 'application/json' };
   if (token) {
@@ -51,139 +67,200 @@ const authedFetch = async (url: string, token: string | null, options: RequestIn
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
-    const error = new Error(`An error occurred while fetching: ${response.statusText}`);
-    // You can add more error details if needed, e.g., from response body
-    throw error;
+    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+    const errorMessage = errorData.detail || 'An unknown error occurred.';
+    console.error("API Error:", errorMessage);
+    toast({ title: "API Error", description: errorMessage, variant: "destructive" });
+    throw new Error(errorMessage);
   }
 
-  if (response.status === 204) { // No Content
-    return null;
-  }
-
+  if (response.status === 204) return null; // No Content
   return response.json();
 };
 
-
-// Create the provider component
+// --- Provider Component ---
 export const ChecklistsProvider = ({ children }: { children: ReactNode }) => {
-  const { session } = useAuth(); // Use the session from AuthContext
+  // Assume useAuth provides a loading state for its async initialization
+  const { session, loading: isAuthLoading } = useAuth();
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const userId = session?.user?.id;
 
   const fetchChecklists = useCallback(async () => {
     setIsLoading(true);
     try {
-      // The backend will return public templates if token is null,
-      // or user-specific checklists if token is provided.
       const data = await authedFetch(`${API_BASE_URL}/checklists/`, session?.access_token || null);
       setChecklists(data || []);
     } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Could not load checklists.", variant: "destructive" });
+      // authedFetch now handles toast
     } finally {
       setIsLoading(false);
     }
-  }, [session]); // Re-run when session changes (login/logout)
+  }, [session]);
 
   useEffect(() => {
-    fetchChecklists();
-  }, [fetchChecklists]);
+    // Only fetch data once the authentication state is confirmed (not loading).
+    // We depend on the stable `userId` to prevent re-fetching on token refresh.
+    if (!isAuthLoading) {
+      fetchChecklists();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthLoading, userId]);
 
-  const getChecklistById = async (id: string) => {
+  const getChecklistById = useCallback(async (id: string) => {
+    if (!session) return undefined;
     setIsLoading(true);
     try {
-      return await authedFetch(`${API_BASE_URL}/checklists/${id}`, session?.access_token || null);
+      const fullChecklist = await authedFetch(`${API_BASE_URL}/checklists/${id}`, session.access_token);
+      // Once full data is fetched, update it in the main state to keep cache fresh
+      setChecklists(prev => prev.map(c => c.id === id ? fullChecklist : c));
+      return fullChecklist;
     } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Could not load checklist details.", variant: "destructive" });
       return undefined;
     } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const updateChecklist = async (updatedChecklist: Checklist): Promise<boolean> => {
-    if (!session) {
-      toast({ title: "Authentication Error", description: "You must be logged in to save changes.", variant: "destructive" });
-      return false;
-    }
-
-    setIsLoading(true);
-    try {
-      await authedFetch(`${API_BASE_URL}/checklists/${updatedChecklist.id}`, session.access_token, {
-        method: 'PUT',
-        body: JSON.stringify(updatedChecklist),
-      });
-
-      // Update local state optimistically or refetch
-      setChecklists(prev => prev.map(c => c.id === updatedChecklist.id ? updatedChecklist : c));
-      return true;
-    } catch (error) {
-      console.error("Failed to update checklist:", error);
-      toast({ title: "Save Failed", description: "Your changes could not be saved to the server.", variant: "destructive" });
-      return false;
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [session]);
 
-  const addChecklist = async (newChecklist: { name: string; tags: string[] }): Promise<Checklist | null> => {
-    if (!session) {
-      toast({ title: "Authentication Error", description: "You must be logged in to create a checklist.", variant: "destructive" });
-      return null;
-    }
-
-    setIsLoading(true);
+  const addChecklist = useCallback(async (data: { name: string; tags: string[] }) => {
+    if (!session) return null;
     try {
-      const createdChecklist = await authedFetch(`${API_BASE_URL}/checklists/`, session.access_token, {
+      const newChecklistInfo = await authedFetch(`${API_BASE_URL}/checklists/`, session.access_token, {
         method: 'POST',
-        body: JSON.stringify(newChecklist),
+        body: JSON.stringify(data),
       });
-      
-      // Add the new checklist to the top of the list
-      setChecklists(prev => [createdChecklist, ...prev]);
-      return createdChecklist;
+      const newFullChecklist = { ...newChecklistInfo, categories: [] };
+      setChecklists(prev => [newFullChecklist, ...prev]);
+      return newFullChecklist;
     } catch (error) {
-      console.error("Failed to create checklist:", error);
-      toast({ title: "Creation Failed", description: "The new checklist could not be created.", variant: "destructive" });
       return null;
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [session]);
 
-  const deleteChecklist = async (id: string): Promise<boolean> => {
-    if (!session) {
-      toast({ title: "Authentication Error", description: "You must be logged in to delete a checklist.", variant: "destructive" });
-      return false;
-    }
-
-    setIsLoading(true);
+  const updateChecklist = useCallback(async (id: string, data: ChecklistUpdateData) => {
+    if (!session) return;
     try {
-      await authedFetch(`${API_BASE_URL}/checklists/${id}`, session.access_token, {
-        method: 'DELETE',
+      const updatedChecklist = await authedFetch(`${API_BASE_URL}/checklists/${id}`, session.access_token, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
       });
+      setChecklists(prev => prev.map(c => c.id === id ? { ...c, ...updatedChecklist } : c));
+      toast({ title: "Checklist Updated", description: `"${data.name}" has been saved.` });
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
 
-      // Remove the checklist from the list
+  const deleteChecklist = useCallback(async (id: string) => {
+    if (!session) return false;
+    try {
+      await authedFetch(`${API_BASE_URL}/checklists/${id}`, session.access_token, { method: 'DELETE' });
       setChecklists(prev => prev.filter(c => c.id !== id));
       return true;
     } catch (error) {
-      console.error("Failed to delete checklist:", error);
-      toast({ title: "Deletion Failed", description: "The checklist could not be deleted.", variant: "destructive" });
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [session]);
+
+  // --- Granular Functions ---
+
+  const addCategory = useCallback(async (checklistId: string, data: CategoryCreateData) => {
+    if (!session) return;
+    try {
+      const newCategory = await authedFetch(`${API_BASE_URL}/checklists/${checklistId}/categories`, session.access_token, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setChecklists(prev => prev.map(c => 
+        c.id === checklistId ? { ...c, categories: [...c.categories, { ...newCategory, items: [] }] } : c
+      ));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
+
+  const updateCategory = useCallback(async (categoryId: string, data: CategoryUpdateData) => {
+    if (!session) return;
+    try {
+      const updatedCategory = await authedFetch(`${API_BASE_URL}/categories/${categoryId}`, session.access_token, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      setChecklists(prev => prev.map(c => ({
+        ...c,
+        categories: c.categories.map(cat => cat.id === categoryId ? { ...cat, ...updatedCategory } : cat)
+      })));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
+
+  const deleteCategory = useCallback(async (checklistId: string, categoryId: string) => {
+    if (!session) return;
+    try {
+      await authedFetch(`${API_BASE_URL}/categories/${categoryId}`, session.access_token, { method: 'DELETE' });
+      setChecklists(prev => prev.map(c => 
+        c.id === checklistId ? { ...c, categories: c.categories.filter(cat => cat.id !== categoryId) } : c
+      ));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
+
+  const addItem = useCallback(async (categoryId: string, data: ItemCreateData) => {
+    if (!session) return;
+    try {
+      const newItem = await authedFetch(`${API_BASE_URL}/categories/${categoryId}/items`, session.access_token, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setChecklists(prev => prev.map(c => ({
+        ...c,
+        categories: c.categories.map(cat => 
+          cat.id === categoryId ? { ...cat, items: [...cat.items, newItem] } : cat
+        )
+      })));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
+
+  const updateItem = useCallback(async (itemId: string, data: ItemUpdateData) => {
+    if (!session) return;
+    try {
+      const updatedItem = await authedFetch(`${API_BASE_URL}/items/${itemId}`, session.access_token, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      setChecklists(prev => prev.map(c => ({
+        ...c,
+        categories: c.categories.map(cat => ({
+          ...cat,
+          items: cat.items.map(item => item.id === itemId ? { ...item, ...updatedItem } : item)
+        }))
+      })));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
+
+  const deleteItem = useCallback(async (categoryId: string, itemId: string) => {
+    if (!session) return;
+    try {
+      await authedFetch(`${API_BASE_URL}/items/${itemId}`, session.access_token, { method: 'DELETE' });
+      setChecklists(prev => prev.map(c => ({
+        ...c,
+        categories: c.categories.map(cat => 
+          cat.id === categoryId ? { ...cat, items: cat.items.filter(item => item.id !== itemId) } : cat
+        )
+      })));
+    } catch (error) { /* Handled by authedFetch */ }
+  }, [session]);
 
   const value = {
     checklists,
     isLoading,
+    fetchChecklists,
     getChecklistById,
-    updateChecklist,
     addChecklist,
+    updateChecklist,
     deleteChecklist,
-  } as ChecklistsContextType;
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addItem,
+    updateItem,
+    deleteItem,
+  };
 
   return (
     <ChecklistsContext.Provider value={value}>
@@ -192,7 +269,6 @@ export const ChecklistsProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Create a custom hook for easy consumption
 export const useChecklists = () => {
   const context = useContext(ChecklistsContext);
   if (context === undefined) {
