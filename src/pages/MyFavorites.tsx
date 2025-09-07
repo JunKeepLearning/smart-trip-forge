@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { getMyFavoritesDetails, Destination, Spot, Route as RouteType, FavoriteItemType } from '@/lib/api';
+import React from 'react';
+import { useFavoritesDetails } from '@/hooks/api/useFavorites';
+import type { Destination, Spot, Route as RouteType, FavoriteItemType } from '@/types';
 import TravelCard from '@/components/TravelCard';
-import { useUI } from '@/contexts/UIContext';
+import { useUIStore } from '@/stores/ui';
 import DetailDrawer from '@/components/DetailDrawer';
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 
 // A type guard to help TypeScript identify the item type
 const isDestination = (item: any): item is Destination & { item_type: 'destination' } => item.item_type === 'destination';
@@ -13,38 +14,32 @@ const isRoute = (item: any): item is RouteType & { item_type: 'route' } => item.
 type FavoritedItem = (Destination | Spot | RouteType) & { item_type: FavoriteItemType };
 
 const MyFavorites = () => {
-  const [favorites, setFavorites] = useState<FavoritedItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { openDrawer } = useUI();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const data = await getMyFavoritesDetails();
-        setFavorites(data);
-      } catch (error) {
-        console.error("Failed to fetch favorites details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const { data: favorites, isLoading, isError } = useFavoritesDetails();
+  const { openDrawer } = useUIStore();
 
   const handleCardClick = (item: Destination | Spot | RouteType, type: 'destination' | 'route' | 'spot') => {
     openDrawer(item, type);
   };
 
-  const destinations = favorites.filter(isDestination);
-  const spots = favorites.filter(isSpot);
-  const routes = favorites.filter(isRoute);
-
-  if (loading) {
-    return <div className="container mx-auto px-4 py-8 text-center">Loading favorites...</div>;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading favorites...</p>
+      </div>
+    );
   }
 
-  if (favorites.length === 0) {
+  if (isError) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center text-destructive">
+        <h2 className="mt-4 text-2xl font-bold">Failed to Load Favorites</h2>
+        <p className="mt-2">Please try again later.</p>
+      </div>
+    );
+  }
+
+  if (!favorites || favorites.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <Star className="mx-auto h-16 w-16 text-gray-300" />
@@ -53,6 +48,10 @@ const MyFavorites = () => {
       </div>
     );
   }
+
+  const destinations = favorites.filter(isDestination);
+  const spots = favorites.filter(isSpot);
+  const routes = favorites.filter(isRoute);
 
   return (
     <div className="container mx-auto px-4 py-8">

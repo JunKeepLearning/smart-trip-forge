@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useUI } from '@/contexts/UIContext';
+import { useUIStore } from '@/stores/ui';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Route, Building2, ArrowRight, AlertCircle, Info } from 'lucide-react';
@@ -20,7 +20,7 @@ import { useNavigate, Link } from 'react-router-dom';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { openDrawer } = useUI();
+  const { openDrawer } = useUIStore();
   const navigate = useNavigate();
 
   const { data, loading, error } = useExploreData();

@@ -16,7 +16,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { addDays, format, differenceInCalendarDays } from "date-fns";
 import { useState, useEffect } from "react";
-import { searchDestinations, SearchableDestination } from "@/lib/api";
+import { useSearchDestinations } from "@/hooks/api/useSearchDestinations";
+import type { SearchableDestination } from "@/types";
 import { Loader2, CalendarIcon, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
@@ -34,9 +35,10 @@ export type CreateTripFormValues = z.infer<typeof formSchema>;
 
 interface CreateTripFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => void;
+  isSubmitting?: boolean;
 }
 
-export function CreateTripForm({ onSubmit }: CreateTripFormProps) {
+export function CreateTripForm({ onSubmit, isSubmitting }: CreateTripFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -45,25 +47,33 @@ export function CreateTripForm({ onSubmit }: CreateTripFormProps) {
     }
   });
 
-  // State for destination search
-  const [searchResults, setSearchResults] = useState<SearchableDestination[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  // --- State Management ---
+  // State for debouncing the search query
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isDropdownVisible, setDropdownVisible] = useState(false);
   const destinationQuery = form.watch("destination");
 
-  // State for date input mode
+  // State for date input UI
   const [dateInputMode, setDateInputMode] = useState<"duration" | "dates">("duration");
-
-  // State for date range picker
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: form.getValues("startDate"),
     to: form.getValues("endDate"),
   });
-
-  // State for duration stepper
   const [duration, setDuration] = useState(() => 
       differenceInCalendarDays(form.getValues("endDate"), form.getValues("startDate")) + 1
   );
+
+  // --- React Query for Destination Search ---
+  const { data: searchResults, isLoading: isSearching } = useSearchDestinations(debouncedQuery);
+
+  // --- Effects ---
+  // Debounce effect for destination search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(destinationQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [destinationQuery]);
 
   // Sync date states with form changes
   useEffect(() => {
@@ -82,22 +92,7 @@ export function CreateTripForm({ onSubmit }: CreateTripFormProps) {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // Destination search effect
-  useEffect(() => {
-    if (!destinationQuery || destinationQuery.length < 1) {
-      setSearchResults([]);
-      return;
-    }
-    setIsSearching(true);
-    const handler = setTimeout(() => {
-      searchDestinations(destinationQuery).then(results => {
-        setSearchResults(results);
-        setIsSearching(false);
-      });
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [destinationQuery]);
-
+  // --- Handlers ---
   const handleSelectDestination = (destination: SearchableDestination) => {
     form.setValue("destination", `${destination.city}, ${destination.country}`);
     setDropdownVisible(false);
@@ -130,11 +125,11 @@ export function CreateTripForm({ onSubmit }: CreateTripFormProps) {
                     onBlur={() => setTimeout(() => setDropdownVisible(false), 150)}
                   />
                 </FormControl>
-                {isDropdownVisible && destinationQuery && destinationQuery.length > 0 && (
+                {isDropdownVisible && debouncedQuery && debouncedQuery.length > 1 && (
                   <div className="absolute z-10 w-full mt-1 bg-background border border-input rounded-md shadow-lg">
                     {isSearching ? (
                       <div className="flex items-center justify-center p-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
-                    ) : searchResults.length > 0 ? (
+                    ) : searchResults && searchResults.length > 0 ? (
                       <ul>
                         {searchResults.map((result, index) => (
                           <li 
@@ -241,7 +236,10 @@ export function CreateTripForm({ onSubmit }: CreateTripFormProps) {
         
         <div className="flex justify-end space-x-2 pt-4">
             <Button variant="outline" disabled>Smart Plan (Coming Soon)</Button>
-            <Button type="submit">Self Plan</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />} 
+              Self Plan
+            </Button>
         </div>
       </form>
     </Form>

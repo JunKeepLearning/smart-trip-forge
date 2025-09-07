@@ -53,6 +53,7 @@ class ChecklistResponse(BaseModel):
     id: uuid.UUID
     name: str
     tags: List[str] = Field(default_factory=list)
+    is_template: bool = False
     categories: List[ChecklistCategory] = Field(default_factory=list)
 
 class ChecklistInfo(BaseModel):
@@ -60,8 +61,6 @@ class ChecklistInfo(BaseModel):
     name: str
     tags: List[str]
     is_template: bool = False
-    items_count: int = 0
-    items_checked_count: int = 0
 
 # Models for Granular Operations
 class CategoryCreate(BaseModel):
@@ -85,14 +84,17 @@ class ItemUpdate(BaseModel):
 
 # --- Main Checklist Endpoints ---
 
-@router.get("/", response_model=List[ChecklistInfo])
+@router.get("/", response_model=List[ChecklistResponse])
 def get_all_checklists(db: Client = Depends(get_supabase_client), user_id: Optional[str] = Depends(optional_user)):
     try:
-        query = db.table("checklists").select("id, name, tags, is_template, items_count, items_checked_count")
+        query = db.table("checklists").select("*, checklist_categories(*, checklist_items(*))")
         if user_id:
-            query = query.eq("user_id", user_id)
+            # A logged-in user sees their own checklists AND templates
+            query = query.or_(f"user_id.eq.{user_id},is_template.eq.true")
         else:
+            # An anonymous user sees only templates
             query = query.eq("is_template", True)
+        
         response = query.order("created_at", desc=True).execute()
         return response.data
     except Exception as e:
@@ -132,19 +134,26 @@ def delete_checklist(checklist_id: uuid.UUID, db: Client = Depends(get_supabase_
 
 # --- Granular Category Endpoints ---
 
-@router.post("/checklists/{checklist_id}/categories", response_model=ChecklistCategory, status_code=status.HTTP_201_CREATED)
+@router.post("/{checklist_id}/categories", response_model=ChecklistCategory, status_code=status.HTTP_201_CREATED)
 def create_category_for_checklist(checklist_id: uuid.UUID, req: CategoryCreate, db: Client = Depends(get_supabase_client), user_id: str = Depends(require_user)):
-    _verify_user_owns_checklist(db, user_id, str(checklist_id))
+    # RLS policy on checklist_categories handles ownership verification.
     try:
         res = db.table("checklist_categories").insert({
             "checklist_id": str(checklist_id),
             "name": req.name,
-            "icon": req.icon
+            "icon": req.icon,
+            # Note: user_id is not directly on this table, ownership is derived from the checklist.
         }).execute()
+        
         if not res.data:
-            raise HTTPException(status_code=500, detail="Failed to create category.")
-        return res.data[0]
+            # This can happen if RLS fails (e.g., checklist_id doesn't exist or user doesn't own it)
+            raise HTTPException(status_code=404, detail="Failed to create category. Checklist not found or access denied.")
+        
+        new_category = res.data[0]
+        new_category['items'] = []
+        return new_category
     except Exception as e:
+        # Catch potential database errors, e.g., unique constraint violations
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/categories/{category_id}", response_model=ChecklistCategory)

@@ -30,11 +30,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/components/ui/use-toast';
-import { useChecklists } from '@/contexts/ChecklistsContext';
-import type { Checklist as ChecklistType } from '@/contexts/ChecklistsContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useChecklists, useCreateChecklist, useDeleteChecklist } from '@/hooks/api/useChecklists';
+import type { Checklist as ChecklistType } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Plus, 
   Bot, 
@@ -66,19 +65,19 @@ const ChecklistCardSkeleton = () => {
 const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, isTemplate?: boolean }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { deleteChecklist } = useChecklists();
+  const deleteMutation = useDeleteChecklist();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
 
-  // Progress is now directly from the checklist object's pre-calculated fields
-  const total = checklist.items_count || 0;
-  const checked = checklist.items_checked_count || 0;
+  const total = checklist.counts?.total || 0;
+  const checked = checklist.counts?.checked || 0;
 
-  const handleDeleteConfirm = async () => {
-    const success = await deleteChecklist(checklist.id);
-    if (success) {
-      toast({ title: "Checklist deleted" });
-    }
-    setIsAlertOpen(false);
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate(checklist.id, {
+      onSuccess: () => {
+        toast({ title: "Checklist deleted" });
+        setIsAlertOpen(false);
+      },
+    });
   };
 
   const handleCopyTemplate = () => {
@@ -137,7 +136,10 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Continue</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2"/>}
+              Continue
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -147,41 +149,34 @@ const ChecklistCard = ({ checklist, isTemplate }: { checklist: ChecklistType, is
 
 const Checklist = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const { checklists, addChecklist, isLoading } = useChecklists();
+  const { data: checklists, isLoading, isError } = useChecklists();
+  const createMutation = useCreateChecklist();
 
   const [isChecklistDialogOpen, setIsChecklistDialogOpen] = useState(false);
   const [newChecklistName, setNewChecklistName] = useState("");
   const [newChecklistTags, setNewChecklistTags] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
 
-  const userChecklists = checklists.filter(c => !c.is_template);
-  const templateChecklists = checklists.filter(c => c.is_template);
+  const userChecklists = checklists?.filter(c => !c.is_template) || [];
+  const templateChecklists = checklists?.filter(c => c.is_template) || [];
 
   const handleNewChecklist = () => {
-    if (!user) {
-      toast({ title: "Login Required", description: "Please log in to create a new checklist." });
-      return;
-    }
     setNewChecklistName("");
     setNewChecklistTags("");
     setIsChecklistDialogOpen(true);
   };
 
-  const handleSaveChecklist = async () => {
-    setIsCreating(true);
-    const newChecklist = await addChecklist({
+  const handleSaveChecklist = () => {
+    createMutation.mutate({
       name: newChecklistName || "Untitled Checklist",
       tags: newChecklistTags.split(',').map(t => t.trim()).filter(Boolean),
+    }, {
+      onSuccess: (newChecklist) => {
+        toast({ title: "Checklist created" });
+        setIsChecklistDialogOpen(false);
+        navigate(`/checklist/${newChecklist.id}`);
+      }
     });
-
-    if (newChecklist) {
-      toast({ title: "Checklist created" });
-      setIsChecklistDialogOpen(false);
-      navigate(`/checklist/${newChecklist.id}`);
-    }
-    setIsCreating(false);
   };
 
   const renderSkeletons = () => (
@@ -206,12 +201,10 @@ const Checklist = () => {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            {user && (
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Checklist
-              </Button>
-            )}
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNewChecklist}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Checklist
+            </Button>
             <Button variant="outline" className="border-primary text-primary hover:bg-primary/10" onClick={() => toast({ title: "Coming Soon!", description: "AI Checklist feature is under development." })}>
               <Bot className="w-4 h-4 mr-2" />
               AI Checklist
@@ -225,33 +218,25 @@ const Checklist = () => {
             <TabsTrigger value="templates">Template Center</TabsTrigger>
           </TabsList>
           <TabsContent value="my-checklists">
-            {isLoading ? renderSkeletons() : (
-              user ? (
-                userChecklists.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                    {userChecklists.map((checklist) => (
-                      <ChecklistCard key={checklist.id} checklist={checklist} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16">
-                    <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">No checklists yet</h3>
-                    <p className="text-muted-foreground mb-6">You haven't created any checklists yet. Get started now!</p>
-                    <Button onClick={handleNewChecklist}>Create Your First Checklist</Button>
-                  </div>
-                )
+            {isLoading ? renderSkeletons() : isError ? <p>Error loading checklists.</p> : (
+              userChecklists.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                  {userChecklists.map((checklist) => (
+                    <ChecklistCard key={checklist.id} checklist={checklist} />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-16">
                   <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">Login to see your checklists</h3>
-                  <p className="text-muted-foreground">Or browse the templates to get started.</p>
+                  <h3 className="text-lg font-medium text-foreground mb-2">No checklists yet</h3>
+                  <p className="text-muted-foreground mb-6">You haven't created any checklists yet. Get started now!</p>
+                  <Button onClick={handleNewChecklist}>Create Your First Checklist</Button>
                 </div>
               )
             )}
           </TabsContent>
           <TabsContent value="templates">
-            {isLoading ? renderSkeletons() : (
+            {isLoading ? renderSkeletons() : isError ? <p>Error loading templates.</p> : (
               templateChecklists.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                   {templateChecklists.map((checklist) => (
@@ -286,9 +271,9 @@ const Checklist = () => {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="secondary" disabled={isCreating}>Cancel</Button></DialogClose>
-            <Button onClick={handleSaveChecklist} disabled={isCreating}>
-              {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            <DialogClose asChild><Button type="button" variant="secondary" disabled={createMutation.isPending}>Cancel</Button></DialogClose>
+            <Button onClick={handleSaveChecklist} disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

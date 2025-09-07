@@ -1,7 +1,7 @@
 // src/components/profile/UserInfoCard.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/auth';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { User, Loader2 } from 'lucide-react'; // Import Loader2 for loading spin
 import { toast } from "sonner"; // Import toast for notifications
 
 export function UserInfoCard() {
-  const { user, loading, updateUserDisplayName } = useAuth();
+  const { user, loading, updateUserDisplayName } = useAuthStore();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,6 +29,15 @@ export function UserInfoCard() {
     }
   }, [nickname]);
 
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isSaving) {
+      handleSaveChanges();
+    } else if (e.key === 'Escape') {
+      handleCancel();
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!tempNickname.trim()) {
       toast.error("Nickname cannot be empty.");
@@ -40,11 +49,25 @@ export function UserInfoCard() {
     setIsSaving(false);
 
     if (error) {
-      toast.error(`Failed to update profile: ${error}`);
+      let errorMessage = "Failed to update profile";
+      if (error.type === 'network') {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.type === 'server') {
+        errorMessage = "Server error. Please try again later.";
+      } else if (error.type === 'auth') {
+        errorMessage = "Authentication error. Please log in again.";
+      }
+      toast.error(errorMessage);
     } else {
       toast.success("Profile updated successfully!");
       setIsDialogOpen(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Reset the temp nickname to the current value
+    setTempNickname(nickname || "");
+    setIsDialogOpen(false);
   };
 
   if (loading) {
@@ -82,7 +105,7 @@ export function UserInfoCard() {
           <DialogTrigger asChild>
             <Button variant="outline">Edit Profile</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px]" onKeyDown={handleKeyDown}>
             <DialogHeader>
               <DialogTitle>Edit Profile</DialogTitle>
               <DialogDescription>
@@ -99,10 +122,14 @@ export function UserInfoCard() {
                   value={tempNickname}
                   onChange={(e) => setTempNickname(e.target.value)}
                   className="col-span-3"
+                  autoFocus
                 />
               </div>
             </div>
             <DialogFooter>
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
               <Button type="submit" onClick={handleSaveChanges} disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 
                 {isSaving ? 'Saving...' : 'Save Changes'}

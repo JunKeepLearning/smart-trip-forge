@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChecklistItem } from '@/contexts/ChecklistsContext';
+import { ChecklistItem } from '@/stores/checklists';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ interface EditItemDialogProps {
   onDelete: () => void;
 }
 
-export const EditItemDialog = ({ isOpen, onOpenChange, item, onSave, onDelete }: EditItemDialogProps) => {
+const EditItemDialog = ({ isOpen, onOpenChange, item, onSave, onDelete }: EditItemDialogProps) => {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
@@ -102,3 +102,5 @@ export const EditItemDialog = ({ isOpen, onOpenChange, item, onSave, onDelete }:
     </Dialog>
   );
 };
+
+export default EditItemDialog

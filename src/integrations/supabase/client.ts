@@ -22,5 +22,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: false, // 禁用URL会话检测减少不必要的请求
   }
 });

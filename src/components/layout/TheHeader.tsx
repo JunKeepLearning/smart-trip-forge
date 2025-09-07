@@ -1,6 +1,4 @@
 
-// 导入 React 库，用于组件开发
-import React from 'react';
 // 导入 Link 组件，用于在应用内进行路由导航
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 // 导入自定义的 Button 组件
@@ -8,7 +6,7 @@ import { Button } from '@/components/ui/button';
 // 从 lucide-react 库导入图标，用于界面元素
 import { LogOut, Settings, Star } from 'lucide-react';
 // 导入 useAuth 自定义钩子，用于访问认证上下文
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/auth';
 // 导入下拉菜单相关组件
 import {
   DropdownMenu,
@@ -26,7 +24,7 @@ import { navLinks } from './layout';
 // 定义 TheHeader 组件
 const TheHeader = () => {
   // 从认证上下文中获取当前用户和登出函数
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {

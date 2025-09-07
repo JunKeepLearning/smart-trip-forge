@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Route, Building2, Calendar, Star } from 'lucide-react';
-import { Destination, Spot, Route as RouteType, FavoriteItemType } from '@/lib/api';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { MapPin, Route, Building2, Calendar, Star, Loader2 } from 'lucide-react';
+import type { Destination, Spot, Route as RouteType, FavoriteItemType } from '@/types';
+import { useFavorites, useAddFavorite, useRemoveFavorite } from '@/hooks/api/useFavorites';
 
 // Define props for each card type using a discriminated union
 type TravelCardBaseProps = {
@@ -42,27 +42,42 @@ const highlightMatch = (text: string, query: string) => {
   );
 };
 
-// Favorite Button Component
+// Favorite Button Component (Refactored with React Query)
 const FavoriteButton = ({ item_id, item_type }: { item_id: string, item_type: FavoriteItemType }) => {
-  const { isFavorited, addFavorite, removeFavorite } = useFavorites();
-  const favorited = isFavorited(item_id, item_type);
+  const { data: favoritesList } = useFavorites();
+  const addFavoriteMutation = useAddFavorite();
+  const removeFavoriteMutation = useRemoveFavorite();
+
+  const favorited = useMemo(() => 
+    favoritesList?.some(fav => fav.item_id === item_id && fav.item_type === item_type) || false,
+    [favoritesList, item_id, item_type]
+  );
+
+  const isMutating = addFavoriteMutation.isPending || removeFavoriteMutation.isPending;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isMutating) return;
+
     if (favorited) {
-      removeFavorite(item_id, item_type);
+      removeFavoriteMutation.mutate({ itemId: item_id, itemType: item_type });
     } else {
-      addFavorite(item_id, item_type);
+      addFavoriteMutation.mutate({ itemId: item_id, itemType: item_type });
     }
   };
 
   return (
     <button
       onClick={handleFavoriteClick}
+      disabled={isMutating}
       className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/75 transition-colors z-10"
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
     >
-      <Star className={`w-5 h-5 transition-all ${favorited ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+      {isMutating ? (
+        <Loader2 className="w-5 h-5 animate-spin" />
+      ) : (
+        <Star className={`w-5 h-5 transition-all ${favorited ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+      )}
     </button>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useUI } from '@/contexts/UIContext';
+import { useUIStore } from '@/stores/ui';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from '@/components/SearchBar';
 import DetailDrawer from '@/components/DetailDrawer';
@@ -20,7 +20,7 @@ const SearchResults = () => {
   const type = searchParams.get('type') as 'destination' | 'spot' | 'route' | null;
   const [searchQuery, setSearchQuery] = useState(query);
   const [currentPage, setCurrentPage] = useState(1);
-  const { openDrawer } = useUI();
+  const { openDrawer } = useUIStore();
 
   const { data: recommendedData, loading: loadingRecommended } = useExploreData();
   

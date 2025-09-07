@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/auth';
 import { UserInfoCard } from '@/components/profile/UserInfoCard';
 import { SubscriptionCard } from '@/components/profile/SubscriptionCard';
 import { HelpCenterCard } from '@/components/profile/HelpCenterCard';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
 export default function Profile() {
-  const { signOut } = useAuth();
+  const { signOut } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {

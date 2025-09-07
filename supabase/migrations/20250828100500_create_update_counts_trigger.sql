@@ -1,47 +1,72 @@
--- Function to update checklist counts
-CREATE OR REPLACE FUNCTION public.update_checklist_counts()
-RETURNS TRIGGER AS $$
+-- Function to update checklist counts incrementally and efficiently
+CREATE OR REPLACE FUNCTION public.update_checklist_counts_incrementally()
+RETURNS TRIGGER AS $
 DECLARE
-  v_checklist_id uuid;
+  v_checklist_id_old uuid;
+  v_checklist_id_new uuid;
 BEGIN
-  -- Determine the checklist_id from the changed row
-  IF (TG_OP = 'DELETE') THEN
-    -- For DELETE, the checklist_id comes from the OLD row
-    SELECT category.checklist_id INTO v_checklist_id FROM public.checklist_categories category WHERE category.id = OLD.category_id;
-  ELSE
-    -- For INSERT or UPDATE, it comes from the NEW row
-    SELECT category.checklist_id INTO v_checklist_id FROM public.checklist_categories category WHERE category.id = NEW.category_id;
+  -- On UPDATE, find both old and new checklist_ids
+  IF (TG_OP = 'UPDATE') THEN
+    SELECT c.checklist_id INTO v_checklist_id_old FROM public.checklist_categories c WHERE c.id = OLD.category_id;
+    SELECT c.checklist_id INTO v_checklist_id_new FROM public.checklist_categories c WHERE c.id = NEW.category_id;
+
+    -- If item moved between checklists
+    IF (v_checklist_id_old IS DISTINCT FROM v_checklist_id_new) THEN
+      -- Decrement old checklist if it exists
+      IF v_checklist_id_old IS NOT NULL THEN
+        UPDATE public.checklists
+        SET
+          items_count = items_count - 1,
+          items_checked_count = items_checked_count - CASE WHEN OLD.checked THEN 1 ELSE 0 END
+        WHERE id = v_checklist_id_old;
+      END IF;
+      -- Increment new checklist if it exists
+      IF v_checklist_id_new IS NOT NULL THEN
+        UPDATE public.checklists
+        SET
+          items_count = items_count + 1,
+          items_checked_count = items_checked_count + CASE WHEN NEW.checked THEN 1 ELSE 0 END
+        WHERE id = v_checklist_id_new;
+      END IF;
+    ELSE -- Item updated within the same checklist
+      IF (OLD.checked IS DISTINCT FROM NEW.checked) THEN
+        UPDATE public.checklists
+        SET items_checked_count = items_checked_count + CASE WHEN NEW.checked THEN 1 ELSE -1 END
+        WHERE id = v_checklist_id_new;
+      END IF;
+    END IF;
+
+  -- On DELETE, find the old checklist_id and decrement
+  ELSIF (TG_OP = 'DELETE') THEN
+    SELECT c.checklist_id INTO v_checklist_id_old FROM public.checklist_categories c WHERE c.id = OLD.category_id;
+    IF v_checklist_id_old IS NOT NULL THEN
+      UPDATE public.checklists
+      SET
+        items_count = items_count - 1,
+        items_checked_count = items_checked_count - CASE WHEN OLD.checked THEN 1 ELSE 0 END
+      WHERE id = v_checklist_id_old;
+    END IF;
+
+  -- On INSERT, find the new checklist_id and increment
+  ELSIF (TG_OP = 'INSERT') THEN
+    SELECT c.checklist_id INTO v_checklist_id_new FROM public.checklist_categories c WHERE c.id = NEW.category_id;
+    IF v_checklist_id_new IS NOT NULL THEN
+      UPDATE public.checklists
+      SET
+        items_count = items_count + 1,
+        items_checked_count = items_checked_count + CASE WHEN NEW.checked THEN 1 ELSE 0 END
+      WHERE id = v_checklist_id_new;
+    END IF;
   END IF;
 
-  -- If a checklist_id was found, update its counts
-  IF v_checklist_id IS NOT NULL THEN
-    UPDATE public.checklists
-    SET
-      items_count = (
-        SELECT COUNT(*)
-        FROM public.checklist_items i
-        JOIN public.checklist_categories c ON i.category_id = c.id
-        WHERE c.checklist_id = v_checklist_id
-      ),
-      items_checked_count = (
-        SELECT COUNT(*)
-        FROM public.checklist_items i
-        JOIN public.checklist_categories c ON i.category_id = c.id
-        WHERE c.checklist_id = v_checklist_id AND i.checked = TRUE
-      )
-    WHERE id = v_checklist_id;
-  END IF;
-
-  -- Return the appropriate row
-  IF (TG_OP = 'DELETE') THEN
-    RETURN OLD;
-  ELSE
-    RETURN NEW;
-  END IF;
+  RETURN NULL; -- The trigger result is irrelevant
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to call the function after any change to checklist_items
+-- Drop the old trigger before creating the new one
+DROP TRIGGER IF EXISTS trigger_update_checklist_counts ON public.checklist_items;
+
+-- Create the new, efficient trigger
 CREATE TRIGGER trigger_update_checklist_counts
 AFTER INSERT OR UPDATE OR DELETE ON public.checklist_items
-FOR EACH ROW EXECUTE FUNCTION public.update_checklist_counts();
+FOR EACH ROW EXECUTE FUNCTION public.update_checklist_counts_incrementally();

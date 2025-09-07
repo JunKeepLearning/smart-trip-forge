@@ -23,6 +23,9 @@ const suggestedCategories: CategoryData[] = [
   { name: 'Gifts', icon: 'Gift' },
   { name: 'Photo Gear', icon: 'Camera' },
   { name: 'Souvenirs', icon: 'Package' },
+  { name: 'Clothing', icon: 'Shirt' },
+  { name: 'Important', icon: 'Star' },
+  { name: 'Electronics', icon: 'Smartphone' },
 ];
 
 const AddCategoryDialog = ({ open, onOpenChange, onAddCategory, existingCategories }: AddCategoryDialogProps) => {

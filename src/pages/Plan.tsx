@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlusCircle, Calendar, MapPin, UserPlus, Trash2, Users, Landmark } from "lucide-react";
+import { PlusCircle, Calendar, MapPin, UserPlus, Trash2, Users, Landmark, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,16 +12,21 @@ import {
 } from "@/components/ui/context-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { CreateTripForm, type CreateTripFormValues } from "@/components/CreateTripForm";
-import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
+import { CreateTripForm, type CreateTripFormValues } from "@/components/trip/CreateTripForm";
+import AddCollaboratorDialog from '@/components/checklist/AddCollaboratorDialog';
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
-import { useTrips, Trip, DayPlan } from "@/contexts/TripsContext";
+import { useTrips, useCreateTrip, useDeleteTrip } from '@/hooks/api/useTrips';
+import type { DayPlan } from '@/types'; // Type definition can be moved later
 
 const Plan = () => {
-  // Global state and navigation
+  // Navigation
   const navigate = useNavigate();
-  const { trips, addTrip, deleteTrip } = useTrips();
+
+  // Server State Management via React Query
+  const { data: trips, isLoading, isError } = useTrips();
+  const createTripMutation = useCreateTrip();
+  const deleteTripMutation = useDeleteTrip();
 
   // Local UI state
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -53,22 +58,35 @@ const Plan = () => {
 
   const handleDeleteConfirm = () => {
     if (deletingTripId) {
-      deleteTrip(deletingTripId);
-      setDeleteDialogOpen(false);
-      setDeletingTripId(null);
+      deleteTripMutation.mutate(deletingTripId, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setDeletingTripId(null);
+        }
+      });
     }
   };
   
   const handleSelfPlan = (values: CreateTripFormValues) => {
-    const newTrip = addTrip({
+    const newTripData = {
       name: `Trip to ${values.destination}`,
       destination: values.destination,
       startDate: format(values.startDate, 'yyyy-MM-dd'),
       endDate: format(values.endDate, 'yyyy-MM-dd'),
       description: "",
+      // Mock data defaults, real API would handle this
+      status: "Not Started" as const,
+      createdAt: new Date().toISOString(),
+      itinerary: [],
+      collaborators: [],
+    };
+
+    createTripMutation.mutate(newTripData, {
+      onSuccess: (createdTrip) => {
+        setCreateDialogOpen(false);
+        navigate(`/plan/${createdTrip.id}`);
+      }
     });
-    setCreateDialogOpen(false);
-    navigate(`/plan/${newTrip.id}`);
   };
 
   const handleAddCollaborator = (tripId: string) => {
@@ -105,7 +123,20 @@ const Plan = () => {
         <div className="space-y-6">
           <h2 className="text-2xl font-semibold text-foreground">My Trips</h2>
 
-          {trips.length === 0 ? (
+          {isLoading && (
+            <div className="text-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+              <p className="mt-4 text-muted-foreground">Loading your trips...</p>
+            </div>
+          )}
+
+          {isError && (
+             <div className="text-center py-12 text-destructive">
+              <p>Failed to load trips. Please try again later.</p>
+            </div>
+          )}
+
+          {!isLoading && !isError && trips && trips.length === 0 && (
             <div className="text-center py-12">
               <div className="p-6 rounded-full bg-muted/30 inline-block mb-4">
                 <MapPin className="h-12 w-12 text-muted-foreground" />
@@ -117,7 +148,9 @@ const Plan = () => {
                 Create Your First Trip
               </Button>
             </div>
-          ) : (
+          )}
+
+          {!isLoading && !isError && trips && trips.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {trips.map((trip) => {
                 const { days, nights } = calculateDuration(trip.startDate, trip.endDate);
@@ -191,7 +224,10 @@ const Plan = () => {
             <DialogTitle>Start a New Trip</DialogTitle>
             <DialogDescription>Provide some basic details to begin planning.</DialogDescription>
           </DialogHeader>
-          <CreateTripForm onSubmit={handleSelfPlan} />
+          <CreateTripForm 
+            isSubmitting={createTripMutation.isPending}
+            onSubmit={handleSelfPlan} 
+          />
         </DialogContent>
       </Dialog>
 
@@ -204,7 +240,14 @@ const Plan = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm} 
+              disabled={deleteTripMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteTripMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} 
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

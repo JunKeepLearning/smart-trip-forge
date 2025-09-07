@@ -1,6 +1,4 @@
 // src/components/profile/HelpCenterCard.tsx
-
-import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, LifeBuoy, MessageSquare, BookOpen, Info } from 'lucide-react';

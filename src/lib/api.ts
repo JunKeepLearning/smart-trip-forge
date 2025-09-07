@@ -1,144 +1,147 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080';
+import { useAuthStore } from '@/stores/auth';
+import { toast } from "@/components/ui/use-toast";
+import type { 
+  Checklist, 
+  ChecklistCategory, 
+  ChecklistItem, 
+  Trip, 
+  FavoriteItemType, 
+  FavoriteItemIdentifier, 
+  Destination,
+  Spot,
+  Route as RouteType,
+  ExploreData,
+  SearchableDestination
+} from '@/types';
 
-export interface Destination {
-  id: string; // Changed to string to be more generic
-  name: string;
-  description: string;
-  image: string;
-  highlights: string[];
-}
+// --- Configuration ---
+// In a real app, this would come from environment variables
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-export interface Route {
-  id: string; // Changed to string
-  name: string;
-  startCity: string;
-  endCity: string;
-  days: number;
-  tags: string[];
-  description: string;
-}
+// --- Centralized API Fetch Client ---
 
-export interface Spot {
-  id: string; // Changed to string
-  name: string;
-  destination: string;
-  description: string;
-  image: string;
-  category: string;
-}
+/**
+ * A wrapper around fetch that automatically handles authentication, 
+ * content type, and unified error handling.
+ * @param url - The URL to fetch, relative to API_BASE_URL
+ * @param options - Standard fetch options
+ * @returns The JSON response
+ */
+const authedFetch = async (endpoint: string, options: RequestInit = {}) => {
+  const token = useAuthStore.getState().session?.access_token;
 
-export interface ExploreData {
-  destinations: Destination[];
-  routes: Route[];
-  spots: Spot[];
-}
-
-export type FavoriteItemType = 'destination' | 'spot' | 'route';
-
-export interface FavoriteItemIdentifier {
-  item_id: string;
-  item_type: FavoriteItemType;
-}
-
-export interface SearchableDestination {
-  city: string;
-  country: string;
-}
-
-export const searchDestinations = async (query: string): Promise<SearchableDestination[]> => {
-  if (!query) {
-    return [];
+  // Allow certain public endpoints to be fetched without a token
+  const publicEndpoints = ['/explore', '/destinations/search'];
+  if (!token && !publicEndpoints.some(p => endpoint.startsWith(p))) {
+    const error = new Error("No authentication token provided. Please log in.");
+    toast({ title: "Authentication Error", description: error.message, variant: "destructive" });
+    throw error;
   }
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let response: Response;
   try {
-    // We need to specify the full URL to the backend running on a different port
-    const response = await fetch(`${API_BASE_URL}/api/data/search/destinations?q=${encodeURIComponent(query)}`);
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
+    response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+  } catch (networkError: any) {
+    const error = new Error(`Network error: ${networkError.message}`);
+    toast({ title: "Network Error", description: "Failed to connect to the server.", variant: "destructive" });
+    throw error;
+  }
+
+  if (!response.ok) {
+    let errorMessage = "An unknown error occurred.";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || `API Error (${response.status})`;
+    } catch {
+      errorMessage = `API Error (${response.status}) - ${response.statusText}`;
     }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Failed to fetch destinations:", error);
-    return [];
+    toast({ title: "API Error", description: errorMessage, variant: "destructive" });
+    throw new Error(errorMessage);
+  }
+
+  if (response.status === 204) return null; // Handle No Content response
+  return response.json();
+};
+
+// --- Type definitions for API method arguments ---
+type ChecklistUpdateData = Partial<{ name: string; tags: string[] }>;
+type CategoryCreateData = { name: string; icon?: string };
+type CategoryUpdateData = Partial<CategoryCreateData>;
+type ItemCreateData = { name: string; quantity?: number };
+type ItemUpdateData = Partial<Omit<ChecklistItem, "id" | "category_id">>;
+
+// --- Structured API Methods ---
+
+export const api = {
+  checklists: {
+    getAll: (): Promise<Checklist[]> => authedFetch('/checklists'),
+    getById: (id: string): Promise<Checklist> => authedFetch(`/checklists/${id}`),
+    create: (data: { name: string; tags: string[] }): Promise<Checklist> => authedFetch('/checklists', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: ChecklistUpdateData): Promise<Checklist> => authedFetch(`/checklists/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string): Promise<null> => authedFetch(`/checklists/${id}`, { method: 'DELETE' }),
+  },
+  categories: {
+    create: (checklistId: string, data: CategoryCreateData): Promise<ChecklistCategory> => authedFetch(`/checklists/${checklistId}/categories`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (categoryId: string, data: CategoryUpdateData): Promise<ChecklistCategory> => authedFetch(`/categories/${categoryId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (categoryId: string): Promise<null> => authedFetch(`/categories/${categoryId}`, { method: 'DELETE' }),
+  },
+  items: {
+    create: (categoryId: string, data: ItemCreateData): Promise<ChecklistItem> => authedFetch(`/categories/${categoryId}/items`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (itemId: string, data: ItemUpdateData): Promise<ChecklistItem> => authedFetch(`/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (itemId: string): Promise<null> => authedFetch(`/items/${itemId}`, { method: 'DELETE' }),
+  },
+  favorites: {
+    getAll: (): Promise<FavoriteItemIdentifier[]> => authedFetch('/favorites'),
+    getFavoritesDetails: (): Promise<(Destination | Spot | RouteType)[]> => authedFetch('/favorites/details'),
+    add: (itemId: string, itemType: FavoriteItemType): Promise<FavoriteItemIdentifier> => authedFetch('/favorites', { method: 'POST', body: JSON.stringify({ item_id: itemId, item_type: itemType }) }),
+    remove: (itemId: string, itemType: FavoriteItemType): Promise<null> => authedFetch(`/favorites`, { method: 'DELETE', body: JSON.stringify({ item_id: itemId, item_type: itemType }) }),
+  },
+  explore: {
+    get: (): Promise<ExploreData> => authedFetch('/explore'),
+  },
+  destinations: {
+    search: (query: string): Promise<SearchableDestination[]> => authedFetch(`/destinations/search?q=${encodeURIComponent(query)}`),
   }
 };
 
 
-// --- MOCK DATABASE ---
+// --- Mock API for Trips (to be replaced later) ---
 
-const destinations: Destination[] = [
-  { id: 'dest_1', name: 'Beijing', description: 'Historic capital with ancient architecture and modern culture', image: '/placeholder.svg', highlights: ['Forbidden City', 'Great Wall', 'Temple of Heaven'] },
-  { id: 'dest_2', name: "Xi'an", description: 'Ancient capital famous for Terracotta Warriors', image: '/placeholder.svg', highlights: ['Terracotta Army', 'City Wall', 'Muslim Quarter'] },
-  { id: 'dest_3', name: 'Shanghai', description: 'Modern metropolis blending East and West', image: '/placeholder.svg', highlights: ['The Bund', 'Yu Garden', 'Oriental Pearl Tower'] },
-  { id: 'dest_4', name: 'Chengdu', description: 'Home of giant pandas and spicy Sichuan cuisine', image: '/placeholder.svg', highlights: ['Panda Base', 'Jinli Street', 'Wenshu Monastery'] },
-  { id: 'dest_5', name: 'Guilin', description: 'Famous for its karst landscape and picturesque Li River', image: '/placeholder.svg', highlights: ['Li River Cruise', 'Yangshuo', 'Reed Flute Cave'] },
-];
-
-const routes: Route[] = [
-  { id: 'route_1', name: 'Classic China Discovery', startCity: 'Beijing', endCity: 'Shanghai', days: 7, tags: ['7-day', 'Cultural', 'Historic'], description: "Experience China's imperial past and vibrant present" },
-  { id: 'route_2', name: 'Family Adventure Tour', startCity: 'Beijing', endCity: "Xi'an", days: 5, tags: ['5-day', 'Family Friendly', 'Educational'], description: 'Perfect introduction to Chinese history for families' },
-  { id: 'route_3', name: 'City Explorer Route', startCity: 'Shanghai', endCity: 'Suzhou', days: 3, tags: ['3-day', 'Urban', 'Modern'], description: 'Modern cities and traditional gardens' },
-];
-
-const spots: Spot[] = [
-  { id: 'spot_1', name: 'Forbidden City', destination: 'Beijing', description: 'Imperial palace complex with 600 years of history', image: '/placeholder.svg', category: 'Historic' },
-  { id: 'spot_2', name: 'Terracotta Warriors', destination: "Xi'an", description: 'Ancient army of clay soldiers guarding an emperor', image: '/placeholder.svg', category: 'Archaeological' },
-  { id: 'spot_3', name: 'The Bund', destination: 'Shanghai', description: 'Iconic waterfront with colonial architecture', image: '/placeholder.svg', category: 'Architecture' },
-  { id: 'spot_4', name: 'Chengdu Panda Base', destination: 'Chengdu', description: 'Research and breeding center for giant pandas', image: '/placeholder.svg', category: 'Wildlife' },
-];
-
-// This acts as our mock database table for user_favorites
-let mockFavoritesDB: FavoriteItemIdentifier[] = [
-  { item_id: 'dest_1', item_type: 'destination' },
-  { item_id: 'route_2', item_type: 'route' },
-  { item_id: 'spot_4', item_type: 'spot' },
-];
-
-// --- MOCK API FUNCTIONS ---
-
-const simulateNetwork = (delay: number = 500) => new Promise(resolve => setTimeout(resolve, delay));
-
-export const fetchExploreData = async (): Promise<ExploreData> => {
-  await simulateNetwork();
-  return { destinations, routes, spots };
-};
-
-export const getFavorites = async (): Promise<FavoriteItemIdentifier[]> => {
-  await simulateNetwork(200);
-  return [...mockFavoritesDB]; // Return a copy
-};
-
-export const addFavorite = async (item_id: string, item_type: FavoriteItemType): Promise<FavoriteItemIdentifier> => {
-  await simulateNetwork(300);
-  const newItem = { item_id, item_type };
-  
-  const exists = mockFavoritesDB.some(fav => fav.item_id === item_id && fav.item_type === item_type);
-  if (exists) {
-    // In a real API, this would throw a 409 Conflict error
-    console.warn("Item already in favorites");
-    return newItem;
+const mockTrips: Trip[] = [
+  {
+    id: "1", name: "Beijing Cultural Journey", destination: "Beijing, China", startDate: "2024-03-15", endDate: "2024-03-20",
+    description: "6-day exploration of historic Beijing", status: "In Progress", createdAt: "2024-02-10",
+    itinerary: [], collaborators: []
+  },
+  { 
+    id: "2", name: "Shanghai Modern Adventure", destination: "Shanghai, China", startDate: "2024-04-10", endDate: "2024-04-14",
+    description: "5-day modern city experience", status: "Not Started", createdAt: "2024-02-15",
+    itinerary: [], collaborators: []
   }
+];
 
-  mockFavoritesDB.push(newItem);
-  return newItem;
-};
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-export const removeFavorite = async (item_id: string, item_type: FavoriteItemType): Promise<void> => {
-  await simulateNetwork(300);
-  mockFavoritesDB = mockFavoritesDB.filter(fav => !(fav.item_id === item_id && fav.item_type === item_type));
-};
-
-// Function to get full details of favorited items
-export const getMyFavoritesDetails = async () => {
-    await simulateNetwork();
-    const currentFavorites = await getFavorites();
-    
-    const allItems = [...destinations, ...routes, ...spots];
-
-    const favoriteDetails = currentFavorites.map(fav => {
-        const item = allItems.find(i => i.id === fav.item_id);
-        return { ...item, item_type: fav.item_type };
-    });
-
-    return favoriteDetails.filter(Boolean) as (Destination | Route | Spot & { item_type: FavoriteItemType })[];
+export const mockApi = {
+  getTrips: async (): Promise<Trip[]> => {
+    await delay(500);
+    return mockTrips;
+  },
+  createTrip: async (newTripData: Omit<Trip, 'id' | 'status' | 'createdAt' | 'itinerary' | 'collaborators'>): Promise<Trip> => {
+    await delay(500);
+    const newTrip: Trip = {
+      id: Date.now().toString(), status: "Not Started", createdAt: new Date().toISOString(), itinerary: [], collaborators: [], ...newTripData,
+    };
+    mockTrips.unshift(newTrip);
+    return newTrip;
+  },
+  // ... other mock trip functions
 };

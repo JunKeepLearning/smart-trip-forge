@@ -1,14 +1,14 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { useUI } from '@/contexts/UIContext';
+import { useUIStore } from '@/stores/ui';
 import TheHeader from '@/components/TheHeader';
 import TheFooter from '@/components/TheFooter';
 import BottomNavbar from './BottomNavbar';
 import { cn } from '@/lib/utils';
 
 const MainLayout = () => {
-  const { drawer } = useUI();
+  const { drawer } = useUIStore();
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
