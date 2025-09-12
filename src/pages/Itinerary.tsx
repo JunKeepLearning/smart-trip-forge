@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useTrips, DayPlan, ItineraryItem } from "@/contexts/TripsContext";
+import { useTrip, useUpdateTrip, useDeleteTrip } from "@/hooks/api/useTrips";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ItineraryItemForm, ItineraryItemFormValues } from "@/components/ItineraryItemForm";
+import { ItineraryItemForm, ItineraryItemFormValues } from "@/components/trip/ItineraryItemForm";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,17 +13,20 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
-import TripSettings from '@/components/TripSettings';
-import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
+import TripSettings from '@/components/trip/TripSettings';
+import AddCollaboratorDialog from '@/components/checklist/AddCollaboratorDialog';
 import { PlusCircle, Edit, Trash2, ArrowLeft, Settings, Share2, Calendar, UserPlus, CalendarIcon, ArrowRightLeft, Plus } from "lucide-react";
 import { differenceInCalendarDays, format, parseISO, addDays } from "date-fns";
+import type { DayPlan, ItineraryItem } from "@/types";
 
 const Itinerary = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
-  const { getTripById, updateTrip, deleteTrip } = useTrips();
-
-  const trip = useMemo(() => getTripById(tripId || ''), [tripId, getTripById]);
+  
+  // Use React Query hooks instead of context
+  const { data: trip, isLoading } = useTrip(tripId || '');
+  const updateTripMutation = useUpdateTrip();
+  const deleteTripMutation = useDeleteTrip();
 
   const [itinerary, setItinerary] = useState<DayPlan[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("overview");
@@ -95,7 +98,7 @@ const Itinerary = () => {
   const updateGlobalItinerary = (newItinerary: DayPlan[]) => {
     if (trip) {
       setItinerary(newItinerary);
-      updateTrip(trip.id, { itinerary: newItinerary });
+      updateTripMutation.mutate({ id: trip.id, itinerary: newItinerary });
     }
   };
 
@@ -166,23 +169,25 @@ const Itinerary = () => {
     }, 100); // Short delay to allow accordion to open
   };
 
-  const handleSaveSettings = (updatedTripData) => {
+  const handleSaveSettings = (updatedTripData: any) => {
     if (trip) {
-      updateTrip(trip.id, updatedTripData);
+      updateTripMutation.mutate({ id: trip.id, ...updatedTripData });
       setSettingsOpen(false);
     }
   };
 
   const handleDeleteTrip = () => {
     if (trip) {
-      deleteTrip(trip.id);
-      navigate('/plan');
+      deleteTripMutation.mutate(trip.id, {
+        onSuccess: () => navigate('/plan')
+      });
     }
   };
 
   const handleSaveDates = () => {
     if (trip && dateRange?.from && dateRange?.to) {
-      updateTrip(trip.id, {
+      updateTripMutation.mutate({
+        id: trip.id,
         startDate: format(dateRange.from, 'yyyy-MM-dd'),
         endDate: format(dateRange.to, 'yyyy-MM-dd'),
       });
@@ -193,7 +198,10 @@ const Itinerary = () => {
   const handleAddDay = () => {
     if (trip) {
       const newEndDate = addDays(parseISO(trip.endDate), 1);
-      updateTrip(trip.id, { endDate: format(newEndDate, 'yyyy-MM-dd') });
+      updateTripMutation.mutate({ 
+        id: trip.id, 
+        endDate: format(newEndDate, 'yyyy-MM-dd') 
+      });
     }
   };
 
@@ -202,6 +210,15 @@ const Itinerary = () => {
     const nights = days > 0 ? days - 1 : 0;
     return { days, nights };
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-lg text-muted-foreground">Loading trip details...</p>
+      </div>
+    );
+  }
 
   if (!trip) {
     return (

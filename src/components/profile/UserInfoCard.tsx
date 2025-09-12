@@ -56,6 +56,8 @@ export function UserInfoCard() {
         errorMessage = "Server error. Please try again later.";
       } else if (error.type === 'auth') {
         errorMessage = "Authentication error. Please log in again.";
+      } else {
+        errorMessage = error.message || "An unknown error occurred.";
       }
       toast.error(errorMessage);
     } else {

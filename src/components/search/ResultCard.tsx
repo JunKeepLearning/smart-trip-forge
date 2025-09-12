@@ -1,5 +1,4 @@
-import React from 'react';
-import Highlighter from './Highlighter';
+import Highlighter from '@/components/common/Highlighter';
 import { Destination, Route, Spot } from '@/lib/api';
 import { MapPin, Calendar, Star } from 'lucide-react';
 

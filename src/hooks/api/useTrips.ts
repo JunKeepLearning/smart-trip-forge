@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, mockApi } from '@/lib/api'; // Assuming mockApi is exported for trips
-import type { Trip, DayPlan, ItineraryItem } from '@/types';
+import { api } from '@/lib/api'; // Assuming mockApi is exported for trips
+import type { Trip, DayPlan } from '@/types';
 
 // --- Query Keys Factory ---
 const tripKeys = {
@@ -16,23 +16,14 @@ const tripKeys = {
 export const useTrips = () => {
   return useQuery<Trip[], Error>({
     queryKey: tripKeys.lists(),
-    queryFn: mockApi.getTrips, // Using mockApi for now
+    queryFn: api.trips.getAll,
   });
 };
 
 export const useTrip = (tripId: string | null | undefined) => {
   return useQuery<Trip, Error>({
     queryKey: tripKeys.detail(tripId!),
-    // This should ideally use a real API call like api.trips.getById(tripId!)
-    // For now, we simulate it by finding it in the mock data from the list query.
-    queryFn: async () => {
-        const trips = await mockApi.getTrips();
-        const trip = trips.find(t => t.id === tripId);
-        if (!trip) {
-            throw new Error('Trip not found');
-        }
-        return trip;
-    },
+    queryFn: () => api.trips.getById(tripId!),
     enabled: !!tripId,
   });
 };
@@ -53,7 +44,7 @@ const useTripMutation = () => {
 export const useCreateTrip = () => {
   const invalidate = useTripMutation();
   return useMutation({
-    mutationFn: mockApi.createTrip, // Using mockApi
+    mutationFn: api.trips.create,
     onSuccess: () => invalidate(),
   });
 };
@@ -61,7 +52,7 @@ export const useCreateTrip = () => {
 export const useUpdateTrip = () => {
   const invalidate = useTripMutation();
   return useMutation<Trip, Error, Partial<Trip> & { id: string }>({
-    mutationFn: api.updateTrip, // Assuming a real API for updates
+    mutationFn: (data) => api.trips.update(data.id, data),
     onSuccess: (_, variables) => invalidate(variables.id),
   });
 };
@@ -69,7 +60,7 @@ export const useUpdateTrip = () => {
 export const useDeleteTrip = () => {
   const invalidate = useTripMutation();
   return useMutation<void, Error, string>({
-    mutationFn: api.deleteTrip, // Assuming a real API
+    mutationFn: api.trips.delete,
     onSuccess: () => invalidate(),
   });
 };

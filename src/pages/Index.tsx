@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import FeatureCards from '@/components/FeatureCards';
+import FeatureCards from '@/components/common/FeatureCards';
 
 const Index = () => {
   return (

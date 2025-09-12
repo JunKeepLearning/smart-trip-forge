@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUIStore } from '@/stores/ui';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import SearchBar from '@/components/SearchBar';
-import DetailDrawer from '@/components/DetailDrawer';
+import SearchBar from '@/components/search/SearchBar';
+import DetailDrawer from '@/components/checklist/DetailDrawer';
 import { useExploreData } from '@/hooks/useExploreData';
-import { getMyFavoritesDetails, Destination, Spot, Route as RouteType } from '@/lib/api';
-import ResultCard from '@/components/ResultCard';
+import { api } from '@/lib/api';
+import ResultCard from '@/components/search/ResultCard';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { ArrowLeft } from 'lucide-react';
@@ -31,7 +31,7 @@ const SearchResults = () => {
     const loadFavorites = async () => {
       setLoadingMy(true);
       try {
-        const favs = await getMyFavoritesDetails();
+        const favs = await api.favorites.getFavoritesDetails();
         setMyFavorites(favs);
       } catch (error) {
         console.error("Failed to load favorite details:", error);

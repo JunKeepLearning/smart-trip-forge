@@ -15,7 +15,7 @@ import { Trash2, Image, User, Shield, CalendarIcon, ArrowRightLeft } from 'lucid
 import { DateRange } from 'react-day-picker';
 import { format, parseISO, addDays, differenceInCalendarDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import AddCollaboratorDialog from '@/components/AddCollaboratorDialog';
+import AddCollaboratorDialog from '@/components/checklist/AddCollaboratorDialog';
 
 const TripSettings = ({ trip, open, onOpenChange, onSave, onDelete }) => {
   if (!trip) return null;

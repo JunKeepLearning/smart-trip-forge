@@ -19,9 +19,8 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Settings, Share2, Package, Shirt, Star, Smartphone, Plus, Car, Utensils, Gift, Camera, Loader2 } from "lucide-react";
-import ChecklistSettings from "@/components/ChecklistSettings";
-import AddCategoryDialog, { CategoryData } from "@/components/AddCategoryDialog";
-import { EditItemDialog } from "@/components/EditItemDialog";
+import { CategoryData } from "@/components/checklist/AddCategoryDialog";
+import { EditItemDialog , ChecklistSettings , AddCategoryDialog } from "@/components/checklist";
 
 const iconMap: { [key: string]: React.ComponentType<any> } = {
   Shirt, Star, Smartphone, Car, Utensils, Gift, Camera, Package,

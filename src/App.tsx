@@ -4,11 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ScrollToTop from "@/components/common/ScrollToTop";
+import {ErrorBoundary,ScrollToTop,GlobalNotifications,GlobalLoading} from "@/components/common";
 import { useAuthSubscription } from "@/hooks/useAuthSubscription";
-import ErrorBoundary from "@/components/common/ErrorBoundary";
-import GlobalNotifications from "@/components/common/GlobalNotifications";
-import GlobalLoading from "@/components/common/GlobalLoading";
+
 
 // Layouts
 import MainLayout from "@/components/layout/MainLayout";
@@ -82,9 +80,9 @@ const AppContent: React.FC = () => {
               <Route path="/" element={<Index />} />
               <Route path="/explore" element={<Explore />} />
               <Route path="/plan" element={<Plan />} />
-              <Route path="/plan/:tripId" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
+              <Route path="/plan/:tripId" element={<Itinerary />} />
               <Route path="/checklist" element={<Checklist />} />
-              <Route path="/checklist/:checklistId" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
+              <Route path="/checklist/:checklistId" element={<ChecklistDetail />} />
               <Route path="/costs" element={<Costs />} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/my-favorites" element={<ProtectedRoute><MyFavorites /></ProtectedRoute>} />

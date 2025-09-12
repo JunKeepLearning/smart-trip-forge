@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/stores/auth';
-import { toast } from "@/components/ui/use-toast";
 import type { 
   Checklist, 
   ChecklistCategory, 
@@ -16,7 +15,7 @@ import type {
 
 // --- Configuration ---
 // In a real app, this would come from environment variables
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- Centralized API Fetch Client ---
 
@@ -34,11 +33,11 @@ const authedFetch = async (endpoint: string, options: RequestInit = {}) => {
   const publicEndpoints = ['/explore', '/destinations/search'];
   if (!token && !publicEndpoints.some(p => endpoint.startsWith(p))) {
     const error = new Error("No authentication token provided. Please log in.");
-    toast({ title: "Authentication Error", description: error.message, variant: "destructive" });
+    // 不再在这里显示 toast，让调用方处理错误
     throw error;
   }
 
-  const headers: HeadersInit = {
+  const headers: HeadersInit & { "Authorization"?: string } = {
     "Content-Type": "application/json",
     ...options.headers,
   };
@@ -51,7 +50,7 @@ const authedFetch = async (endpoint: string, options: RequestInit = {}) => {
     response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
   } catch (networkError: any) {
     const error = new Error(`Network error: ${networkError.message}`);
-    toast({ title: "Network Error", description: "Failed to connect to the server.", variant: "destructive" });
+    // 不再在这里显示 toast，让调用方处理错误
     throw error;
   }
 
@@ -63,7 +62,7 @@ const authedFetch = async (endpoint: string, options: RequestInit = {}) => {
     } catch {
       errorMessage = `API Error (${response.status}) - ${response.statusText}`;
     }
-    toast({ title: "API Error", description: errorMessage, variant: "destructive" });
+    // 不再在这里显示 toast，让调用方处理错误
     throw new Error(errorMessage);
   }
 
@@ -109,6 +108,15 @@ export const api = {
   },
   destinations: {
     search: (query: string): Promise<SearchableDestination[]> => authedFetch(`/destinations/search?q=${encodeURIComponent(query)}`),
+  },
+  trips: {
+    getAll: (): Promise<Trip[]> => authedFetch('/trips'),
+    getById: (id: string): Promise<Trip> => authedFetch(`/trips/${id}`),
+    create: (data: Omit<Trip, 'id' | 'status' | 'createdAt' | 'itinerary' | 'collaborators'>): Promise<Trip> => 
+      authedFetch('/trips', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Trip>): Promise<Trip> => 
+      authedFetch(`/trips/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string): Promise<null> => authedFetch(`/trips/${id}`, { method: 'DELETE' }),
   }
 };
 

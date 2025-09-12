@@ -1,9 +1,9 @@
-import React from 'react';
+
 import { useFavoritesDetails } from '@/hooks/api/useFavorites';
 import type { Destination, Spot, Route as RouteType, FavoriteItemType } from '@/types';
-import TravelCard from '@/components/TravelCard';
+import TravelCard from '@/components/trip/TravelCard';
 import { useUIStore } from '@/stores/ui';
-import DetailDrawer from '@/components/DetailDrawer';
+import DetailDrawer from '@/components/checklist/DetailDrawer';
 import { Star, Loader2 } from 'lucide-react';
 
 // A type guard to help TypeScript identify the item type

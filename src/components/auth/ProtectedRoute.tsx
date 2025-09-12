@@ -20,11 +20,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       hideLoading();
     }
 
+    // 调试日志
+    console.log('ProtectedRoute: user=', user, 'loading=', loading);
+
     // 清理函数
     return () => {
       hideLoading();
     };
-  }, [loading, showLoading, hideLoading]);
+  }, [loading, showLoading, hideLoading, user]);
 
   // 如果仍在加载，显示加载状态
   if (loading) {
@@ -40,10 +43,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // 如果用户未认证，重定向到登录页，并保存用户尝试访问的路径
   if (!user) {
+    console.log('ProtectedRoute: redirecting to login, from=', location.pathname);
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 用户已认证，渲染子组件
+  console.log('ProtectedRoute: rendering protected content');
   return <>{children}</>;
 };
 

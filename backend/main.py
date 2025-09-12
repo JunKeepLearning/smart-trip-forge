@@ -8,6 +8,7 @@ from app.api.favorites_api import router as favorites_router
 from app.core.client import init_supabase_for_startup
 import time
 from app.utils.logger import setup_logger
+from app.utils.timing import init_request_state, cleanup_request_state, get_db_time, get_total_time
 
 from fastapi import FastAPI, Depends
 from app.core.auth import require_user
@@ -61,24 +62,37 @@ def read_root():
 def read_me(user_id: str = Depends(require_user)):
     return {"user_id": user_id}
 
-# ---------------- 请求日志中间件 ----------------
+# ---------------- 请求耗时分析中间件 ----------------
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def timing_middleware(request: Request, call_next):
     """
-    一个中间件，用于记录每个传入请求的详细信息以及响应。
-    它会记录请求的方法、URL、客户端 IP、响应状态码和处理时长。
+    一个中间件，用于分析请求耗时，区分后端逻辑耗时和数据库耗时。
     """
     client_ip = request.client.host if request.client else "Unknown"
+    
+    # 记录请求开始时间
     start_time = time.time()
-    
     logger.info(f"Request: {request.method} {request.url} - From: {client_ip}")
-
-    response = await call_next(request)
     
-    process_time = (time.time() - start_time) * 1000  # 转换为毫秒
+    # 初始化请求状态
+    init_request_state(request)
+    
+    try:
+        response = await call_next(request)
+    finally:
+        # 清理请求状态
+        cleanup_request_state(request)
+    
+    # 计算总耗时
+    total_time = get_total_time(request) * 1000  # 转换为毫秒
+    db_time = get_db_time(request) * 1000  # 转换为毫秒
+    logic_time = total_time - db_time
+    
     logger.info(
         f"Response: {response.status_code} - "
-        f"Duration: {process_time:.2f}ms"
+        f"Total: {total_time:.2f}ms | "
+        f"Logic: {logic_time:.2f}ms | "
+        f"DB: {db_time:.2f}ms"
     )
     
     return response

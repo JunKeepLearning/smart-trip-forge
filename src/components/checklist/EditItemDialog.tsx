@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChecklistItem } from '@/stores/checklists';
+import type { ChecklistItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';

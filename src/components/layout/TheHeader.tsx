@@ -19,7 +19,7 @@ import {
 // 导入头像相关组件
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // 从布局配置中导入导航链接
-import { navLinks } from './layout';
+import { navLinks } from '@/components/layout';
 
 // 定义 TheHeader 组件
 const TheHeader = () => {

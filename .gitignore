@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Editor directories and files
+.claude/*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -27,3 +28,4 @@ dist-ssr
 config.toml
 
 CLAUDE.md
+IFLOW.md

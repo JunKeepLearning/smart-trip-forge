@@ -122,9 +122,9 @@ const Login: React.FC = () => {
       }
       
       setFieldErrors({ form: errorMessage });
-      return false;
+      return { success: false };
     }
-    return true;
+    return { success: true };
   };
 
   const handleSignUp = async () => {
@@ -204,11 +204,14 @@ const Login: React.FC = () => {
       } else if (mode === 'signup') {
         await handleSignUp();
       } else {
-        const success = await handleSignIn();
+        const { success } = await handleSignIn();
         if (success) {
           // 获取重定向前的路径，如果没有则使用默认路径
           const from = location.state?.from?.pathname || DEFAULT_REDIRECT_PATH;
-          navigate(from, { replace: true });
+          // 添加一个小延迟确保状态更新完成
+          setTimeout(() => {
+            navigate(from, { replace: true });
+          }, 100);
         }
       }
     } catch (err) {

@@ -1,8 +1,5 @@
 // src/pages/PricingPage.tsx
-
-import React from 'react';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
+import {TheHeader,TheFooter} from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check } from 'lucide-react';

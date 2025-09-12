@@ -38,6 +38,33 @@ export interface Trip {
   collaborators?: Collaborator[];
 }
 
+// API相关类型
+export interface CreateTripRequest {
+  name: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}
+
+export interface UpdateTripRequest extends Partial<CreateTripRequest> {
+  id: string;
+}
+
+// 数据库返回类型
+export interface DBTrip {
+  id: string;
+  name: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  description?: string;
+  status: string;
+  thumbnail?: string;
+  created_at: string;
+  user_id: string;
+}
+
 
 // --- Checklist Related Types ---
 

@@ -1,11 +1,9 @@
 
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { useUIStore } from '@/stores/ui';
-import TheHeader from '@/components/TheHeader';
-import TheFooter from '@/components/TheFooter';
+import {TheHeader, TheFooter} from '@/components/layout';
 import BottomNavbar from './BottomNavbar';
-import { cn } from '@/lib/utils';
+
 
 const MainLayout = () => {
   const { drawer } = useUIStore();

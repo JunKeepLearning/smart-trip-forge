@@ -3,8 +3,8 @@ import { useUIStore } from '@/stores/ui';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Route, Building2, ArrowRight, AlertCircle, Info } from 'lucide-react';
-import SearchBar from '@/components/SearchBar';
-import DetailDrawer from '@/components/DetailDrawer';
+import SearchBar from '@/components/search/SearchBar';
+import DetailDrawer from '@/components/checklist/DetailDrawer';
 import {
   Carousel,
   CarouselContent,
@@ -12,8 +12,8 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from '@/components/ui/carousel';
-import TravelCard from '@/components/TravelCard';
-import TravelCardSkeleton from '@/components/TravelCardSkeleton';
+import TravelCard from '@/components/trip/TravelCard';
+import TravelCardSkeleton from '@/components/trip/TravelCardSkeleton';
 import { useExploreData } from '@/hooks/useExploreData';
 import { Destination, Spot, Route as RouteType } from '@/lib/api';
 import { useNavigate, Link } from 'react-router-dom';

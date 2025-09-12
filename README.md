@@ -1,162 +1,165 @@
-# Welcome to your Lovable project
+# Smart Trip Forge
 
-## Project info
+Smart Trip Forge is a modern travel planning application built with React + TypeScript + FastAPI. The project provides comprehensive travel planning features including trip management, checklist system, favorites, destination exploration, and expense management.
 
-**URL**: https://lovable.dev/projects/fc8dc68d-2762-4cea-9de8-521470a949dc
+## Features
 
-## 如何编辑此代码？
+- **Trip Planning**: Create and manage travel plans with detailed itineraries
+- **Checklist System**: Customizable travel checklists with category organization
+- **Favorites**: Save favorite destinations and points of interest
+- **Destination Exploration**: Browse and search destinations with detailed information
+- **Expense Management**: Track travel expenses and budget planning
+- **User Authentication**: Secure login and registration with Supabase Auth
+- **Responsive Design**: Mobile-friendly interface with dark/light theme support
 
-有几种方式可以编辑您的应用程序。
+## Installation and Setup
 
-**使用 Lovable**
+### Prerequisites
 
-只需访问 [Lovable 项目](https://lovable.dev/projects/fc8dc68d-2762-4cea-9de8-521470a949dc) 并开始提示。
+- Node.js (v16 or higher)
+- Python (v3.8 or higher)
+- Supabase account for backend services
 
-通过 Lovable 进行的更改将自动提交到此仓库。
+### Frontend Setup
 
-**使用您喜欢的 IDE**
-
-如果您想在本地使用自己的 IDE 工作，可以克隆此仓库并推送更改。推送的更改也会反映在 Lovable 中。
-
-唯一的要求是安装 Node.js 和 npm - [使用 nvm 安装](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-请按照以下步骤操作：
-
-```sh
-# 步骤 1: 使用项目的 Git URL 克隆仓库。
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# 步骤 2: 导航到项目目录。
-cd <YOUR_PROJECT_NAME>
+# Navigate to project directory
+cd smart-trip-forge
 
-# 步骤 3: 安装必要的依赖项。
-npm i
+# Install dependencies
+npm install
 
-# 步骤 4: 启动带自动重载和即时预览的开发服务器。
+# Start development server (port 8080)
 npm run dev
 ```
 
-**直接在 GitHub 上编辑文件**
+### Backend Setup
 
-- 导航到所需的文件。
-- 点击文件视图右上角的"编辑"按钮（铅笔图标）。
-- 进行更改并提交。
+```bash
+# Navigate to backend directory
+cd backend
 
-**使用 GitHub Codespaces**
+# Create virtual environment (recommended)
+python -m venv venv
 
-- 导航到仓库的主页。
-- 点击右上角附近的"代码"按钮（绿色按钮）。
-- 选择"Codespaces"选项卡。
-- 点击"新建 codespace"以启动新的 Codespace 环境。
-- 直接在 Codespace 中编辑文件，完成后提交并推送更改。
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
 
-## 此项目使用了哪些技术？
+# Install dependencies
+pip install -r requirements.txt
 
-此项目使用以下技术构建：
+# Start backend server (port 8000)
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Environment Configuration
 
-## 如何部署此项目？
+Create a `.env` file in the root directory with:
 
-只需打开 [Lovable](https://lovable.dev/projects/fc8dc68d-2762-4cea-9de8-521470a949dc) 并点击 Share -> Publish。
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_BASE_URL=http://localhost:8000
+```
 
-## 我可以将自定义域名连接到我的 Lovable 项目吗？
+Create a `.env` file in the `backend/` directory with:
 
-可以！
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_service_role_key
+DATABASE_URL=postgresql://username:password@host:port/database
+ENVIRONMENT=development
+CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+```
 
-要连接域名，请导航到 Project > Settings > Domains 并点击 Connect Domain。
+## API Documentation
 
-在此处阅读更多内容：[设置自定义域名](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+The API documentation is available through Swagger UI when the backend server is running:
 
-## MVP 开发计划
+- **API Base URL**: http://localhost:8000
+- **Swagger UI**: http://localhost:8000/docs
 
-### 项目概述
+### Main API Endpoints
 
-这是一个使用现代技术栈构建的旅行规划应用程序：
-- 前端：React + TypeScript + Vite
-- 后端：FastAPI (Python)
-- 数据库：Supabase (PostgreSQL)
-- UI 组件：shadcn-ui + Tailwind CSS
-- 状态管理：Zustand + React Query
+#### Data API (`/data`)
+- `GET /data/search/destinations` - Search destinations by name
+- `GET /data/museums` - Get museums data
 
-### MVP 核心功能
+#### Favorites API (`/favorites`)
+- `GET /favorites` - Get user's favorite items
+- `POST /favorites` - Add item to favorites
+- `DELETE /favorites` - Remove item from favorites
 
-1. **用户认证**
-   - 使用 Supabase Auth 登录/注册
-   - 用户资料管理
-   - 会话持久化
+#### Checklists API (`/checklists`)
+- `GET /checklists` - Get all checklists (user's + templates)
+- `POST /checklists` - Create a new checklist
+- `GET /checklists/{id}` - Get detailed checklist information
+- `DELETE /checklists/{id}` - Delete a checklist
+- `POST /checklists/{id}/categories` - Add category to checklist
+- `POST /checklists/categories/{category_id}/items` - Add item to category
+- `PATCH /checklists/items/{item_id}` - Update checklist item
+- `DELETE /checklists/items/{item_id}` - Delete checklist item
 
-2. **旅行规划**
-   - 创建和管理旅行计划
-   - 设置目的地、日期和行程
-   - 行程详情查看和编辑
+## Contributing
 
-3. **清单**
-   - 为旅行创建可自定义的清单
-   - 按类别组织项目
-   - 跟踪完成状态
+We welcome contributions to Smart Trip Forge! Here's how you can contribute:
 
-4. **收藏夹**
-   - 保存喜爱的目的地、景点和路线
-   - 查看和管理收藏集合
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-5. **探索**
-   - 浏览目的地、路线和景点
-   - 搜索功能
-   - 每个地点的详细视图
+### Development Guidelines
 
-### 开发阶段
+- Follow the existing code style and conventions
+- Ensure all tests pass before submitting a pull request
+- Update documentation as needed
+- Write clear, descriptive commit messages
 
-#### 第一阶段：基础架构 (第1周)
-- 设置开发环境
-- 配置 Supabase 认证
-- 实现基本路由和布局
-- 创建核心 UI 组件
+## Deployment
 
-#### 第二阶段：认证和用户管理 (第2周)
-- 实现登录/注册流程
-- 创建用户资料页面
-- 设置受保护路由
-- 添加会话管理
+### Frontend Deployment
 
-#### 第三阶段：旅行规划 (第3周)
-- 构建旅行创建表单
-- 实现行程列表和详情页面
-- 添加行程管理
-- 连接到 Supabase 数据库
+- **Platforms**: Vercel, Netlify, or GitHub Pages
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist/`
+- **Environment Variables**: Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on your deployment platform
 
-#### 第四阶段：清单 (第4周)
-- 开发清单创建和管理
-- 实现类别和项目组织
-- 添加完成跟踪
-- 与行程集成
+### Backend Deployment
 
-#### 第五阶段：收藏夹和探索 (第5周)
-- 构建收藏夹功能
-- 创建带搜索的探索页面
-- 实现详细视图
-- 添加数据持久化
+- **Platforms**: Render, Railway, Heroku, or DigitalOcean App Platform
+- **Start Command**: `uvicorn main:app --host 0.0.0.0 --port 8000`
+- **Python Version**: 3.8+
+- **Dependencies**: `pip install -r requirements.txt`
+- **Environment Variables**: Configure `SUPABASE_URL`, `SUPABASE_KEY`, and `DATABASE_URL`
 
-#### 第六阶段：测试和优化 (第6周)
-- 执行端到端测试
-- 修复错误和优化性能
-- 根据反馈改进 UI/UX
-- 准备部署
+## Technology Stack
 
-### 技术要求
+- **Frontend**: React 18, TypeScript, Vite
+- **Backend**: FastAPI (Python), Supabase
+- **UI Components**: shadcn-ui, Tailwind CSS, Radix UI
+- **State Management**: Zustand, React Query
+- **Form Handling**: React Hook Form, Zod
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Maps**: Leaflet, React Leaflet
+- **Charts**: Recharts
+- **Notifications**: Sonner
 
-- 前端：Node.js 16+
-- 后端：Python 3.8+
-- 数据库和认证：Supabase 账户
-- 环境变量配置
-- 响应式设计以适配所有设备
+## License
 
-### 部署
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- 前端：Vercel 或 Netlify
-- 后端：Render 或类似的 Python 托管服务
-- 数据库：Supabase 云托管
+## Support
+
+For support, please check:
+- [Supabase Documentation](https://supabase.com/docs)
+- [FastAPI Documentation](https://fastapi.tiangolo.com)
+- [React Documentation](https://react.dev)

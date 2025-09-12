@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { saveUserDataToCache, loadUserDataFromCache, clearUserDataCache } from "@/lib/localStorage";
+import { saveUserDataToCache, clearUserDataCache } from "@/lib/localStorage";
 
 interface AuthError {
   message: string;
@@ -37,7 +37,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     // It fires once on subscription with the current state, and then on every auth change.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+
+      console.log('Auth state changed:', event);
+      console.log('Session:', session);
+      console.log('Access token:', session?.access_token);
+      
       const user = session?.user ?? null;
       set({ session, user, loading: false });
 
@@ -84,9 +89,21 @@ export const useAuthStore = create<AuthState>((set) => ({
         };
       }
       
-      return {};
+      // 确保状态正确更新
+      if (data?.session?.user) {
+        set({ 
+          user: data.session.user, 
+          session: data.session, 
+          loading: false 
+        });
+        saveUserDataToCache(data.session.user);
+        return { success: true };
+      }
+      
+      return { success: false, error: { message: "Login successful but user data not available", type: 'unknown' } };
     } catch (err) {
       return { 
+        success: false,
         error: { 
           message: "An unexpected error occurred", 
           type: 'unknown' 
@@ -258,6 +275,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           errorType = 'server';
         }
         
+        // 只返回第一个错误，避免重复提示
         return { 
           error: { 
             message: fetchError.message, 
