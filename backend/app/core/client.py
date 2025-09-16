@@ -98,7 +98,7 @@ def init_supabase_for_startup():
         client = create_client(supabase_url=settings.SUPABASE_URL, supabase_key=key)
 
         # ⚠️ 执行一次轻量查询来验证连接（替代仅仅创建 client）
-        client.table("public.checklists").select("id").limit(1).execute()
+        client.table("checklists").select("id").limit(1).execute()
 
         logger.info("Supabase credentials verified successfully at startup.")
     except Exception as e:

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.api.data_api import router as data_router
 from app.api.checklist_api import router as checklist_router
 from app.api.favorites_api import router as favorites_router
+from app.api.trips_api import router as trips_router
 from app.core.client import init_supabase_for_startup
 import time
 from app.utils.logger import setup_logger
@@ -48,6 +49,7 @@ app.add_middleware(
 app.include_router(data_router, prefix="/data", tags=["data"])
 app.include_router(favorites_router, prefix="/favorites", tags=["Favorites"])
 app.include_router(checklist_router, prefix="/checklists", tags=["Checklists"])
+app.include_router(trips_router, prefix="/trips", tags=["Trips"])
 
 # 根路由
 @app.get("/", summary="Root Endpoint", description="A simple root endpoint to check if the API is running.")

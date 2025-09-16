@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       console.log('Auth state changed:', event);
       console.log('Session:', session);
-      console.log('Access token:', session?.access_token);
+      // console.log('Access token:', session?.access_token);
       
       const user = session?.user ?? null;
       set({ session, user, loading: false });
