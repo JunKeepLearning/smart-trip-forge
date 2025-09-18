@@ -1,345 +1,162 @@
 import os
 import json
-import traceback
-import datetime
-import time
-import argparse
-from dotenv import load_dotenv
+import httpx
+import time, random, traceback
+from datetime import datetime
+from pathlib import Path
 from google import genai
-from cities_data.utils.logger_config import get_logger
-from cities_data.utils.file_utils import (
-    get_city_data_file_path,
-    get_tourism_data_file_path,
-    get_failed_responses_dir,
-    save_individual_city_files,
-    save_results_to_file,
-    save_failed_response
-)
+from google.genai import types
+from utils.logger_config import get_logger
 
-# 获取日志记录器
+# ================== 日志工具 ==================
 logger = get_logger(__name__)
 
-# 全局变量
-API_KEY = None
-model = None
-tourism_cities = ["北京", "上海", "成都"]
-default_model_name = "gemini-1.5-flash"
+# ================== 路径定义 ==================
+BASE_DIR = Path(__file__).resolve().parent
+SOURCE_DIR = BASE_DIR / "source"
+RESULTS_DIR = BASE_DIR / "results"
+CITIES_FILE = SOURCE_DIR / "china_cities.json"
+PROMPT_FILE = SOURCE_DIR / "prompt.txt"
 
-# Prompt 模板
-PROMPT_TEMPLATE = None
+# ================== Gemini 客户端 ==================
+api_key = os.getenv("GEMINI_API_KEY")
+logger.info(f"GEMINI_API_KEY: {api_key[:5]}...{api_key[-5:] if api_key else '未设置'}")
+if not api_key:
+    raise ValueError("请设置环境变量 GEMINI_API_KEY")
 
-def load_prompt_template():
-    """从 source 文件夹加载 prompt 模板"""
-    global PROMPT_TEMPLATE
-    if PROMPT_TEMPLATE is None:
-        prompt_file_path = os.path.join(os.path.dirname(__file__), "source", "prompt")
-        with open(prompt_file_path, "r", encoding="utf-8") as f:
-            PROMPT_TEMPLATE = f.read()
-        logger.info("✅ 成功加载 prompt 模板")
+client = genai.Client(
+    api_key=api_key,
+    http_options=types.HttpOptions(timeout=300)  # 总超时 300 秒
+)
 
+# ================== 参数配置 ==================
+generation_config = types.GenerateContentConfig(
+    temperature=0.5,
+    top_p=0.9,
+    response_mime_type="application/json"
+)
 
-def init_api(model_name=None):
-    """初始化 Gemini API 配置"""
-    global API_KEY, model
+models_to_try = ["gemini-2.5-flash"]
 
-    # 验证环境变量
-    API_KEY = os.getenv("GEMINI_API_KEY")
+# ================== 限速器 ==================
+MAX_CALLS_PER_MINUTE = 1
+_interval = 60 / MAX_CALLS_PER_MINUTE
+_last_call_time = 0
 
-    if not API_KEY:
-        raise ValueError("请在 .env 文件中设置 GEMINI_API_KEY 环境变量")
-    logger.info(f"GEMINI_API_KEY: {API_KEY[:5]}...{API_KEY[-5:] if API_KEY else 'None'}")
+def rate_limit():
+    """确保调用频率不超过限制"""
+    global _last_call_time
+    now = time.time()
+    if now - _last_call_time < _interval:
+        sleep_time = _interval - (now - _last_call_time)
+        logger.info(f"限流中，等待 {sleep_time:.2f} 秒...")
+        time.sleep(sleep_time)
+    _last_call_time = time.time()
 
-    # 使用指定的模型名称或默认名称
-    model_name = model_name if model_name else default_model_name
+# ================== 核心函数 ==================
+def load_cities():
+    with open(CITIES_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    # 初始化 Gemini
+def load_prompt():
+    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+        return f.read()
+
+def get_pending_cities(cities):
+    existing = {f.stem for f in RESULTS_DIR.glob("*.json")}
+    return [c for c in cities if c not in existing]
+
+def safe_parse_json(text: str, city: str):
+    """尝试解析 JSON，失败时保存原始输出"""
     try:
-        genai.configure(api_key=API_KEY)
-        model = genai.GenerativeModel(model_name)
-        logger.info(f"Gemini API 初始化成功，使用模型: {model_name}")
-    except Exception as e:
-        logger.error(f"❌ Gemini API 初始化失败: {e}")
-        logger.error(traceback.format_exc())
-        raise
-
-
-def ensure_api_initialized(model_name=None):
-    """确保 API 已初始化"""
-    if not API_KEY or not model: 
-        init_api(model_name)
-
-
-def generate_city_info(city, model_name=None, max_retries=3):
-    """生成城市旅游信息，包含重试机制"""
-    # 使用指定的模型名称或默认名称
-    model_name = model_name if model_name else default_model_name
-    
-    # 确保 API 已初始化
-    ensure_api_initialized(model_name)
-    
-    # 确保 prompt 模板已加载
-    try:
-        load_prompt_template()
-    except Exception as e:
-        logger.error(f"❌ 加载 prompt 模板失败: {e}")
-        logger.error(traceback.format_exc())
-        return None
-    
-    for attempt in range(max_retries):
-        try:
-            prompt = PROMPT_TEMPLATE.format(destination=city)
-            logger.info(f"请求中... 城市: {city} (尝试 {attempt + 1}/{max_retries})")
-            
-            # 生成内容
-            response = model.generate_content(prompt)
-            
-            logger.info(f"✅ {city} 请求成功")
-            return response
-        except Exception as e:
-            logger.warning(f"⚠️ 请求 {city} 失败 (尝试 {attempt + 1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:
-                # 等待一段时间再重试
-                time.sleep(2 ** attempt)  # 指数退避
-            else:
-                logger.error(f"❌ 请求 {city} 最终失败: {e}")
-                logger.error(traceback.format_exc())
-                return None
-
-
-def process_city_data(city, response, results, failed_cities):
-    """处理单个城市的数据"""
-    if response:
-        try:
-            data = json.loads(response.text)
-            # 验证数据完整性
-            if validate_city_data(data, city):
-                results[city] = data
-                logger.info(f"✅ {city} 数据解析成功")
-            else:
-                logger.warning(f"⚠️ {city} 数据不完整")
-                failed_cities.append(city)
-        except json.JSONDecodeError as e:
-            logger.warning(f"⚠️ {city} 的结果不是合法 JSON")
-            logger.warning(f"原始响应: {response.text[:200]}...")
-            # 保存原始响应以便调试
-            save_failed_response(city, response.text)
-            failed_cities.append(city)
-        except Exception as e:
-            logger.warning(f"⚠️ {city} 数据处理异常: {e}")
-            failed_cities.append(city)
-    else:
-        logger.error(f"❌ {city} 数据获取失败")
-        failed_cities.append(city)
-
-
-def fetch_all_cities_data(cities_list=None, skip_existing=True):
-    """批量生成城市旅游信息
-    
-    Args:
-        cities_list: 城市列表，默认使用内置列表
-        skip_existing: 是否跳过已存在的有效数据文件
-    """
-    # 确保 API 已初始化
-    ensure_api_initialized()
-    
-    # 使用传入的城市列表或默认列表
-    cities = cities_list if cities_list is not None else tourism_cities
-    
-    results = {}
-    failed_cities = []
-    
-    for city in cities:
-        # 检查是否跳过已存在的有效数据
-        if skip_existing:
-            existing_data = load_existing_city_data(city)
-            if existing_data:
-                results[city] = existing_data[city]
-                continue
-        
-        # 生成新数据
-        response = generate_city_info(city)
-        process_city_data(city, response, results, failed_cities)
-    
-    # 记录所有结果
-    logger.info(f"\n=== 批量处理结果 ===")
-    logger.info(f"成功: {len(results)} 个城市")
-    logger.info(f"失败: {len(failed_cities)} 个城市")
-    if failed_cities:
-        logger.info(f"失败城市列表: {', '.join(failed_cities)}")
-    
-    return results
-
-def validate_city_data(data, city, data_type="new"):
-    """验证城市数据的完整性
-    
-    Args:
-        data: 城市数据
-        city: 城市名称
-        data_type: 数据类型，"new" 表示新生成的数据，"existing" 表示已存在的数据
-    """
-    # 检查数据是否为空
-    if not data:
-        return False
-    
-    # 对于已存在的数据，需要检查是否包含城市键
-    if data_type == "existing":
-        if city not in data:
-            return False
-        city_data = data[city]
-    else:
-        city_data = data
-    
-    # 新的 JSON 结构字段
-    required_fields = [
-        "destination", "country", "province", "intro", "sights", "food", 
-        "accommodation", "transport", "experiences", "local_culture", 
-        "tips", "routes", "nearby_cities"
-    ]
-    
-    # 检查必需字段是否存在
-    for field in required_fields:
-        if field not in city_data:
-            logger.warning(f"⚠️ {city} 数据缺少字段: {field}")
-            return False
-    
-    # 检查字段类型
-    if not isinstance(city_data["sights"], list):
-        logger.warning(f"⚠️ {city} sights 应该是数组")
-        return False
-        
-    if not isinstance(city_data["food"], list):
-        logger.warning(f"⚠️ {city} food 应该是数组")
-        return False
-        
-    if not isinstance(city_data["accommodation"], list):
-        logger.warning(f"⚠️ {city} accommodation 应该是数组")
-        return False
-        
-    if not isinstance(city_data["routes"], list):
-        logger.warning(f"⚠️ {city} routes 应该是数组")
-        return False
-        
-    if not isinstance(city_data["nearby_cities"], list):
-        logger.warning(f"⚠️ {city} nearby_cities 应该是数组")
-        return False
-    
-    # 检查 intro 字段
-    if not isinstance(city_data["intro"], dict):
-        logger.warning(f"⚠️ {city} intro 应该是对象")
-        return False
-    
-    # 检查 transport 字段
-    if not isinstance(city_data["transport"], dict):
-        logger.warning(f"⚠️ {city} transport 应该是对象")
-        return False
-    
-    # 检查 experiences 字段
-    if not isinstance(city_data["experiences"], dict):
-        logger.warning(f"⚠️ {city} experiences 应该是对象")
-        return False
-    
-    # 检查 local_culture 字段
-    if not isinstance(city_data["local_culture"], dict):
-        logger.warning(f"⚠️ {city} local_culture 应该是对象")
-        return False
-    
-    # 检查 tips 字段
-    if not isinstance(city_data["tips"], dict):
-        logger.warning(f"⚠️ {city} tips 应该是对象")
-        return False
-    
-    # 对于新生成的数据，额外检查数组元素结构
-    if data_type == "new":
-        # 检查数组元素结构（简单检查前几个元素）
-        if city_data["sights"]:
-            sight = city_data["sights"][0]
-            if not isinstance(sight, dict) or "name" not in sight:
-                logger.warning(f"⚠️ {city} sights 元素结构不正确")
-                return False
-        
-        if city_data["food"]:
-            food = city_data["food"][0]
-            if not isinstance(food, dict) or "name" not in food:
-                logger.warning(f"⚠️ {city} food 元素结构不正确")
-                return False
-        
-        if city_data["accommodation"]:
-            accommodation = city_data["accommodation"][0]
-            if not isinstance(accommodation, dict) or "area" not in accommodation:
-                logger.warning(f"⚠️ {city} accommodation 元素结构不正确")
-                return False
-    
-    return True
-
-
-def load_existing_city_data(city):
-    """加载已存在的城市数据"""
-    try:
-        file_path = get_city_data_file_path(city)
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if validate_city_data(data, city, data_type="existing"):
-                    logger.info(f"✅ 加载已存在的 {city} 数据")
-                    return data
-                else:
-                    logger.warning(f"⚠️ {city} 现有数据无效，将重新生成")
-                    return None
-        else:
-            return None
-    except Exception as e:
-        logger.warning(f"⚠️ 加载 {city} 现有数据时出错: {e}")
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.error(f"⚠️ JSON 解析失败（城市: {city}），原始输出已保存")
+        debug_file = RESULTS_DIR / f"{city}_raw.txt"
+        with open(debug_file, "w", encoding="utf-8") as f:
+            f.write(text)
         return None
 
+def call_gemini(prompt, city, retries=3, delay=2):
+    for model in models_to_try:
+        for attempt in range(1, retries + 1):
+            try:
+                rate_limit()  # ⭐ 调用前限速
+                start_time = time.time()
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=generation_config
+                )
+                elapsed_time = time.time() - start_time
+                logger.info(f"✅ 模型 {model} 成功生成结果，用时 {elapsed_time:.2f} 秒")
 
+                text = response.text.strip()
+                data = safe_parse_json(text, city)
+                if data:
+                    return data, model
 
+            except httpx.ReadTimeout as e:
+                logger.warning(f"⚠️ [ReadTimeout] 模型 {model} 第 {attempt} 次失败")
+            except httpx.ConnectTimeout as e:
+                logger.warning(f"⚠️ [ConnectTimeout] 模型 {model} 第 {attempt} 次失败")
+            except httpx.TransportError as e:
+                logger.warning(f"⚠️ [TransportError] 模型 {model} 第 {attempt} 次失败")
+            except Exception as e:
+                logger.error(
+                    f"❌ [其他异常] 模型 {model} 第 {attempt} 次失败: {repr(e)}\n{traceback.format_exc()}"
+                )
 
-def main(cities_list=None, save_mode="individual"):
-    """主函数
-    
-    Args:
-        cities_list: 城市列表，默认使用内置列表
-        save_mode: 保存模式，"individual" 为每个城市独立文件，"single" 为单个文件
-    """
-    try:
-        logger.info("开始生成城市旅游数据...")
-        
-        # 获取所有城市数据
-        results = fetch_all_cities_data(cities_list)
-        
-        # 保存结果
-        if results:
-            if save_mode == "individual":
-                # 为每个城市保存独立的 JSON 文件
-                success = save_individual_city_files(results)
-                if success:
-                    logger.info(f"✅ 共处理 {len(results)} 个城市的数据，并保存为独立文件")
-                else:
-                    logger.error("❌ 保存独立城市文件失败")
+            if attempt < retries:
+                wait = delay * (2 ** attempt) + random.random()
+                logger.info(f"{wait:.2f} 秒后重试...")
+                time.sleep(wait)
             else:
-                # 保存到单个文件
-                success = save_results_to_file(results)
-                if success:
-                    logger.info(f"✅ 共处理 {len(results)} 个城市的数据，并保存到单个文件")
-                else:
-                    logger.error("❌ 保存结果文件失败")
+                logger.warning(f"模型 {model} 超过最大重试次数，切换下一个模型。")
+                break
+
+    return None, None
+
+def main():
+    RESULTS_DIR.mkdir(exist_ok=True)
+
+    cities = load_cities()
+    prompt_template = load_prompt()
+    pending_cities = get_pending_cities(cities)[:5]  # 仅处理前 5 个待处理城市
+
+    total = len(pending_cities)
+    logger.info(f"总城市数: {len(cities)}，待处理: {total}")
+
+    success_count = 0
+    fail_count = 0
+
+    for idx, city in enumerate(pending_cities, start=1):
+        logger.info(f"开始处理城市: {city}")
+
+        prompt = prompt_template.replace("{destination}", city)
+
+        result, model_used = call_gemini(prompt, city)
+
+        if result:
+            output_file = RESULTS_DIR / f"{city}.json"
+            wrapped_result = {
+                "model": model_used,
+                "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "content": result
+            }
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(wrapped_result, f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ 成功保存: {output_file} (model={model_used})")
+            success_count += 1
         else:
-            logger.warning("⚠️ 没有成功获取任何城市数据")
-            
-    except Exception as e:
-        logger.error(f"❌ 程序执行过程中发生错误: {e}")
-        logger.error(traceback.format_exc())
+            logger.warning(f"未能生成结果: {city}")
+            fail_count += 1
 
+        progress = f"{idx}/{total} ({(idx/total)*100:.1f}%)"
+        logger.info(f"进度: {progress}")
 
-# 批量生成城市旅游信息
+    logger.info("全部任务完成 ✅")
+    logger.info(f"成功: {success_count}，失败: {fail_count}，总计: {total}")
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="生成城市旅游数据")
-    parser.add_argument(
-        "--save-mode",
-        choices=["individual", "single"],
-        default="individual",
-        help="保存模式：individual（每个城市独立文件）或 single（单个文件）"
-    )
-    
-    args = parser.parse_args()
-    main(save_mode=args.save_mode)
+    main()
