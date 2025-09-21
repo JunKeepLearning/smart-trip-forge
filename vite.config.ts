@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true,
     port: 8080,
-    allowedHosts: ['91892f81-442e-4e3a-8ba2-42532071e752-00-pohlr43hx1l6.spock.replit.dev']
+    allowedHosts: ['*']
 
   },
   plugins: [
