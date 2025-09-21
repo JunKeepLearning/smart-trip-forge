@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       port: 8080,
     },
+    allowedHosts: ['.replit.dev']
   },
   plugins: [
     react(),
